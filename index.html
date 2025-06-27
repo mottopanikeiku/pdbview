@@ -3,6 +3,9 @@
 <head>
     <title>PDBView - Molecular Viewer</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><style>.a{fill:%23007bff}.b{fill:%23ff6b6b}.c{fill:%23ffd93d}.d{fill:%2351cf66}</style><circle class='a' cx='20' cy='30' r='8'/><circle class='b' cx='50' cy='20' r='7'/><circle class='c' cx='80' cy='35' r='6'/><circle class='d' cx='35' cy='60' r='9'/><circle class='a' cx='65' cy='70' r='8'/><circle class='b' cx='25' cy='80' r='6'/><line x1='20' y1='30' x2='35' y2='60' stroke='%23666' stroke-width='2'/><line x1='35' y1='60' x2='65' y2='70' stroke='%23666' stroke-width='2'/><line x1='50' y1='20' x2='80' y2='35' stroke='%23666' stroke-width='2'/><line x1='35' y1='60' x2='25' y2='80' stroke='%23666' stroke-width='2'/></svg>">
+    
     <!-- Resource hints for performance -->
     <link rel="preconnect" href="https://files.rcsb.org">
     <link rel="preconnect" href="https://data.rcsb.org">
@@ -940,6 +943,33 @@
             color: #888;
         }
 
+        .zoom-btn {
+            background: #2a2a2a;
+            border: 1px solid #555;
+            color: #ddd;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin: 0 2px;
+            transition: background-color 0.15s ease-out;
+            min-width: auto;
+            width: auto;
+        }
+
+        .zoom-btn:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .zoom-level {
+            font-size: 10px;
+            color: #888;
+            margin-left: 5px;
+            min-width: 40px;
+            display: inline-block;
+        }
+
         .atom-table-container {
             flex: 1;
             background: #0f0f0f;
@@ -1072,10 +1102,10 @@
             
             <div class="tab-container">
                 <div class="tab-nav">
-                                    <button class="tab-button active" onclick="switchTab('3d-view')">3D View</button>
-                <button class="tab-button" onclick="switchTab('literature')">Literature</button>
-                <button class="tab-button" onclick="switchTab('rawpdb')">Raw PDB</button>
-                <button class="tab-button" onclick="switchTab('atoms')">Atoms</button>
+                    <button class="tab-button active" onclick="switchTab('3d-view')">3D View</button>
+                    <button class="tab-button" onclick="switchTab('literature')">Literature</button>
+                    <button class="tab-button" onclick="switchTab('atoms')">Atoms</button>
+                    <button class="tab-button" onclick="switchTab('rawpdb')">Raw PDB</button>
                 </div>
                 
                 <div class="tab-content">
@@ -1163,6 +1193,12 @@
                                     <select class="atom-filter-select" id="atom-element-filter" onchange="filterAtomTable()">
                                         <option value="all">All Elements</option>
                                     </select>
+                                </div>
+                                <div class="atom-filter-group">
+                                    <span class="atom-filter-label">Zoom:</span>
+                                    <button class="zoom-btn" onclick="zoomAtomTable('out')" title="Zoom Out">🔍−</button>
+                                    <button class="zoom-btn" onclick="zoomAtomTable('in')" title="Zoom In">🔍+</button>
+                                    <span class="zoom-level" id="atom-zoom-level">100%</span>
                                 </div>
                                 <div class="atom-stats" id="atom-stats">
                                     No atoms loaded
@@ -2731,6 +2767,10 @@
                             <option value="all">All Records</option>
                             ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
                         </select>
+                        <span style="font-size: 11px; color: #888; margin-left: 15px;">Zoom:</span>
+                        <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">🔍−</button>
+                        <button class="zoom-btn" onclick="zoomPdbTable('in')" title="Zoom In">🔍+</button>
+                        <span class="zoom-level" id="pdb-zoom-level">100%</span>
                     </div>
                     <div class="fast-grid-stats">
                         <span>Showing <span id="grid-visible-count">${fastGrid.filteredData.length}</span> of ${fastGrid.data.length} records</span>
@@ -3186,6 +3226,64 @@
             console.log('Start index:', atomTable.startIndex);
             console.log('End index:', atomTable.endIndex);
             console.log('========================');
+        }
+        
+        // Zoom functionality for tables
+        let atomZoomLevel = 100;
+        let pdbZoomLevel = 100;
+        
+        function zoomAtomTable(direction) {
+            if (direction === 'in') {
+                atomZoomLevel = Math.min(200, atomZoomLevel + 25);
+            } else if (direction === 'out') {
+                atomZoomLevel = Math.max(50, atomZoomLevel - 25);
+            }
+            
+            const container = document.getElementById('atom-table-viewport');
+            const header = document.querySelector('.atom-table-header');
+            const levelDisplay = document.getElementById('atom-zoom-level');
+            
+            if (container) {
+                container.style.transform = `scale(${atomZoomLevel / 100})`;
+                container.style.transformOrigin = 'top left';
+                console.log(`Atom table zoom: ${atomZoomLevel}%`);
+            }
+            
+            if (header) {
+                header.style.transform = `scale(${atomZoomLevel / 100})`;
+                header.style.transformOrigin = 'top left';
+            }
+            
+            if (levelDisplay) {
+                levelDisplay.textContent = `${atomZoomLevel}%`;
+            }
+        }
+        
+        function zoomPdbTable(direction) {
+            if (direction === 'in') {
+                pdbZoomLevel = Math.min(200, pdbZoomLevel + 25);
+            } else if (direction === 'out') {
+                pdbZoomLevel = Math.max(50, pdbZoomLevel - 25);
+            }
+            
+            const container = document.getElementById('fast-grid-viewport');
+            const header = document.querySelector('.fast-grid-header');
+            const levelDisplay = document.getElementById('pdb-zoom-level');
+            
+            if (container) {
+                container.style.transform = `scale(${pdbZoomLevel / 100})`;
+                container.style.transformOrigin = 'top left';
+                console.log(`PDB table zoom: ${pdbZoomLevel}%`);
+            }
+            
+            if (header) {
+                header.style.transform = `scale(${pdbZoomLevel / 100})`;
+                header.style.transformOrigin = 'top left';
+            }
+            
+            if (levelDisplay) {
+                levelDisplay.textContent = `${pdbZoomLevel}%`;
+            }
         }
     </script>
 </body>
