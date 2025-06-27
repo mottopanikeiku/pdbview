@@ -61,6 +61,73 @@
             font-weight: 300;
         }
         
+        /* tab navigation */
+        .tab-container {
+            margin-bottom: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tab-nav {
+            display: flex;
+            background: #1a1a1a;
+            border-radius: 6px 6px 0 0;
+            border: 1px solid #333333;
+            border-bottom: none;
+            overflow: hidden;
+            width: fit-content;
+        }
+        
+        .tab-button {
+            padding: 12px 20px;
+            background: #262626;
+            color: #aaaaaa;
+            border: none;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            border-right: 1px solid #333333;
+            margin: 0;
+            width: auto;
+        }
+        
+        .tab-button:last-child {
+            border-right: none;
+        }
+        
+        .tab-button.active {
+            background: #333333;
+            color: #ffffff;
+        }
+        
+        .tab-button:hover:not(.active) {
+            background: #2f2f2f;
+            color: #cccccc;
+        }
+        
+        .tab-content {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tab-panel {
+            display: none;
+            height: 100%;
+            flex: 1;
+        }
+        
+        .tab-panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
         #viewer-container {
             flex: 1;
             background: #000000;
@@ -68,6 +135,8 @@
             border-radius: 8px;
             position: relative;
             margin-bottom: 16px;
+            height: 100%;
+            min-height: 500px;
         }
         
         .control-panel {
@@ -347,7 +416,194 @@
             border-left: 3px solid #555555;
             font-size: 11px;
             color: #cccccc;
+                         line-height: 1.4;
+         }
+         
+         /* literature tab styles */
+         .literature-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .literature-header {
+            padding: 15px;
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 6px 6px 0 0;
+            border-bottom: none;
+        }
+        
+        .literature-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+        
+        .literature-info {
+            font-size: 11px;
+            color: #aaaaaa;
+        }
+        
+        .papers-list {
+            flex: 1;
+            background: #000000;
+            border: 1px solid #333333;
+            border-radius: 0 0 6px 6px;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .paper-item {
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .paper-item:hover {
+            background: #262626;
+            border-color: #555555;
+        }
+        
+        .paper-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        
+        .paper-authors {
+            font-size: 11px;
+            color: #aaaaaa;
+            margin-bottom: 6px;
+        }
+        
+        .paper-journal {
+            font-size: 11px;
+            color: #888888;
+            margin-bottom: 8px;
+        }
+        
+        .paper-abstract {
+            font-size: 10px;
+            color: #cccccc;
             line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+        }
+        
+        .loading-literature {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #aaaaaa;
+            font-size: 12px;
+        }
+        
+        .no-literature {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #888888;
+            font-size: 12px;
+            text-align: center;
+            flex-direction: column;
+        }
+        
+        .paper-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            display: none;
+            padding: 20px;
+        }
+        
+        .paper-viewer-content {
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .paper-viewer-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #333333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .paper-viewer-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .paper-viewer-close {
+            background: none;
+            border: none;
+            color: #aaaaaa;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            margin: 0;
+        }
+        
+        .paper-viewer-close:hover {
+            color: #ffffff;
+        }
+        
+        .paper-viewer-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .paper-detail {
+            color: #cccccc;
+            line-height: 1.6;
+        }
+        
+        .paper-detail h3 {
+            color: #ffffff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .paper-detail .detail-section {
+            margin-bottom: 20px;
+        }
+        
+        .paper-detail .detail-label {
+            color: #aaaaaa;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
+        .paper-detail .detail-value {
+            color: #ffffff;
+            font-size: 12px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -358,29 +614,59 @@
                 <h1>PDBView</h1>
                 <div class="subtitle">Molecular Structure Viewer</div>
             </div>
-            <div id="viewer-container"></div>
-            <div id="status-display" class="status-display">
-                Ready to load molecular structure...
+            
+            <div class="tab-container">
+                <div class="tab-nav">
+                    <button class="tab-button active" onclick="switchTab('3d-view')">3D View</button>
+                    <button class="tab-button" onclick="switchTab('literature')">Literature</button>
+                </div>
+                
+                <div class="tab-content">
+                    <!-- 3D View Tab -->
+                    <div id="3d-view-panel" class="tab-panel active">
+                        <div id="viewer-container"></div>
+                        
+                        <!-- amino acid detail modal -->
+                        <div id="amino-acid-modal" class="amino-acid-modal">
+                            <div class="modal-header">
+                                <div class="modal-title" id="modal-title">Amino Acid Details</div>
+                                <button class="modal-close" onclick="closeAminoAcidModal()">&times;</button>
+                            </div>
+                            
+                            <div class="amino-acid-structure" id="amino-acid-structure">
+                                <div id="structure-placeholder">Select an amino acid to view its structure</div>
+                            </div>
+                            
+                            <div class="amino-acid-info" id="amino-acid-info">
+                                <!-- amino acid information will be populated here -->
+                            </div>
+                            
+                            <div class="amino-acid-description" id="amino-acid-description">
+                                <!-- amino acid description will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Literature Tab -->
+                    <div id="literature-panel" class="tab-panel">
+                        <div class="literature-container">
+                            <div class="literature-header">
+                                <div class="literature-title" id="literature-title">Related Publications</div>
+                                <div class="literature-info" id="literature-info">Select a protein structure to view related research papers</div>
+                            </div>
+                            <div class="papers-list" id="papers-list">
+                                <div class="no-literature">
+                                    <div>No protein loaded</div>
+                                    <div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to see related publications</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <!-- amino acid detail modal -->
-            <div id="amino-acid-modal" class="amino-acid-modal">
-                <div class="modal-header">
-                    <div class="modal-title" id="modal-title">Amino Acid Details</div>
-                    <button class="modal-close" onclick="closeAminoAcidModal()">&times;</button>
-                </div>
-                
-                <div class="amino-acid-structure" id="amino-acid-structure">
-                    <div id="structure-placeholder">Select an amino acid to view its structure</div>
-                </div>
-                
-                <div class="amino-acid-info" id="amino-acid-info">
-                    <!-- amino acid information will be populated here -->
-                </div>
-                
-                <div class="amino-acid-description" id="amino-acid-description">
-                    <!-- amino acid description will be populated here -->
-                </div>
+            <div id="status-display" class="status-display">
+                Ready to load molecular structure...
             </div>
         </div>
         
@@ -459,6 +745,19 @@
         </div>
     </div>
 
+    <!-- paper viewer modal -->
+    <div id="paper-viewer" class="paper-viewer">
+        <div class="paper-viewer-content">
+            <div class="paper-viewer-header">
+                <div class="paper-viewer-title" id="paper-viewer-title">Paper Details</div>
+                <button class="paper-viewer-close" onclick="closePaperViewer()">&times;</button>
+            </div>
+            <div class="paper-viewer-body" id="paper-viewer-body">
+                <!-- paper content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
     <!-- include required libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://3dmol.org/build/3Dmol-min.js"></script>
@@ -468,18 +767,37 @@
         let currentModel;
         let interactiveMode = false;
         let selectedAtoms = [];
+        let currentPdbId = null;
+        let literatureCache = {};
         
         $(document).ready(function() {
             // initialize the 3dmol.js viewer
+            initializeViewer();
+            
+            // load default molecule
+            loadPDBFromId();
+        });
+        
+        function initializeViewer() {
             let element = $('#viewer-container');
+            if (element.length === 0) {
+                console.error('Viewer container not found');
+                return;
+            }
+            
             viewer = $3Dmol.createViewer(element, {
                 defaultcolors: $3Dmol.elementColors.rasmol,
                 backgroundColor: 'black'
             });
             
-            // load default molecule
-            loadPDBFromId();
-        });
+            // ensure viewer is properly sized
+            setTimeout(() => {
+                if (viewer) {
+                    viewer.resize();
+                    viewer.render();
+                }
+            }, 100);
+        }
         
         function showMessage(message, type = 'info') {
             const statusDisplay = $('#status-display');
@@ -541,6 +859,10 @@
                 type: 'GET',
                 success: function(data) {
                     try {
+                        // clear previous model and literature
+                        viewer.removeAllModels();
+                        clearLiterature();
+                        
                         // add the molecular data to the viewer
                         currentModel = viewer.addModel(data, 'pdb');
                         
@@ -551,7 +873,11 @@
                         viewer.zoomTo();
                         viewer.render();
                         
+                        // store current pdb id and fetch literature
+                        currentPdbId = pdbId;
                         updateMolecularStats(currentModel);
+                        fetchLiterature(pdbId);
+                        
                         showMessage(`${pdbId} loaded successfully`, 'success');
                     } catch (error) {
                         showMessage(`Error parsing PDB data: ${error.message}`, 'error');
@@ -588,6 +914,10 @@
                     // center and render
                     viewer.zoomTo();
                     viewer.render();
+                    
+                    // clear literature for file uploads (no pdb id)
+                    currentPdbId = null;
+                    clearLiterature();
                     
                     updateMolecularStats(currentModel);
                     showMessage(`${file.name} loaded successfully`, 'success');
@@ -643,8 +973,10 @@
                 viewer.render();
                 currentModel = null;
                 selectedAtoms = [];
+                currentPdbId = null;
                 updateMolecularStats(null);
                 closeAminoAcidModal();
+                clearLiterature();
                 showMessage('Display cleared');
                 
                 // turn off interactive mode
@@ -1017,6 +1349,211 @@
             const fileName = this.files[0] ? this.files[0].name : 'Choose PDB File';
             $('.file-label').text(fileName.length > 25 ? fileName.substring(0, 22) + '...' : fileName);
         });
+        
+        // tab switching functions
+        function switchTab(tabName) {
+            // update tab buttons
+            $('.tab-button').removeClass('active');
+            $(`button[onclick="switchTab('${tabName}')"]`).addClass('active');
+            
+            // update tab panels
+            $('.tab-panel').removeClass('active');
+            $(`#${tabName}-panel`).addClass('active');
+            
+            // if switching to 3d view, resize viewer
+            if (tabName === '3d-view' && viewer) {
+                setTimeout(() => {
+                    viewer.resize();
+                    viewer.render();
+                }, 100);
+            }
+        }
+        
+        // literature functions
+        function clearLiterature() {
+            $('#literature-title').text('Related Publications');
+            $('#literature-info').text('Select a protein structure to view related research papers');
+            $('#papers-list').html('<div class="no-literature">No structure loaded</div>');
+        }
+        
+        function fetchLiterature(pdbId) {
+            if (literatureCache[pdbId]) {
+                displayLiterature(pdbId, literatureCache[pdbId]);
+                return;
+            }
+            
+            $('#literature-title').text(`Related Publications for ${pdbId}`);
+            $('#literature-info').text('Loading publications...');
+            $('#papers-list').html('<div class="loading-literature">Fetching literature from RCSB database...</div>');
+            
+            // fetch entry data from rcsb api
+            $.ajax({
+                url: `https://data.rcsb.org/rest/v1/core/entry/${pdbId}`,
+                type: 'GET',
+                success: function(data) {
+                    const citations = data.citation || [];
+                    if (citations.length === 0) {
+                        displayNoLiterature(pdbId);
+                        return;
+                    }
+                    
+                    // fetch detailed publication info for each citation
+                    const publicationPromises = citations.map(citation => {
+                        if (citation.pdbx_database_id_pubmed) {
+                            return fetchPubMedDetails(citation.pdbx_database_id_pubmed, citation);
+                        }
+                        return Promise.resolve(citation);
+                    });
+                    
+                    Promise.all(publicationPromises).then(publications => {
+                        literatureCache[pdbId] = publications.filter(pub => pub !== null);
+                        displayLiterature(pdbId, literatureCache[pdbId]);
+                    });
+                },
+                error: function() {
+                    displayNoLiterature(pdbId, 'Failed to fetch publication data');
+                }
+            });
+        }
+        
+        function fetchPubMedDetails(pubmedId, citation) {
+            return new Promise((resolve) => {
+                $.ajax({
+                    url: `https://data.rcsb.org/rest/v1/core/pubmed/${pubmedId}`,
+                    type: 'GET',
+                    success: function(data) {
+                        resolve({
+                            ...citation,
+                            pubmed_id: pubmedId,
+                            title: data.title || citation.title,
+                            authors: data.author || [],
+                            journal: data.journal_abbrev || citation.journal_abbrev,
+                            year: data.year || citation.year,
+                            abstract: data.abstract || null,
+                            doi: data.doi || citation.pdbx_database_id_doi,
+                            pubmed_data: data
+                        });
+                    },
+                    error: function() {
+                        resolve(citation);
+                    }
+                });
+            });
+        }
+        
+        function displayLiterature(pdbId, publications) {
+            $('#literature-info').text(`Found ${publications.length} publication(s) related to ${pdbId}`);
+            
+            if (publications.length === 0) {
+                displayNoLiterature(pdbId);
+                return;
+            }
+            
+            let html = '';
+            publications.forEach((pub, index) => {
+                const authors = Array.isArray(pub.authors) ? 
+                    pub.authors.slice(0, 3).map(a => `${a.name || a}`).join(', ') + 
+                    (pub.authors.length > 3 ? ` et al.` : '') : 
+                    (pub.rcsb_authors || []).slice(0, 3).join(', ') + 
+                    (pub.rcsb_authors && pub.rcsb_authors.length > 3 ? ' et al.' : '');
+                
+                const abstract = pub.abstract || 'No abstract available.';
+                
+                html += `
+                    <div class="paper-item" onclick="viewPaper(${index})">
+                        <div class="paper-title">${pub.title || 'Untitled'}</div>
+                        <div class="paper-authors">${authors || 'Unknown authors'}</div>
+                        <div class="paper-journal">${pub.journal || 'Unknown journal'} ${pub.year ? `(${pub.year})` : ''}</div>
+                        <div class="paper-abstract">${abstract}</div>
+                    </div>
+                `;
+            });
+            
+            $('#papers-list').html(html);
+        }
+        
+        function displayNoLiterature(pdbId, message = null) {
+            $('#literature-info').text(`No publications found for ${pdbId}`);
+            $('#papers-list').html(`
+                <div class="no-literature">
+                    <div>${message || 'No related publications found'}</div>
+                    <div style="margin-top: 5px; font-size: 10px;">This structure may not have associated research papers in the database</div>
+                </div>
+            `);
+        }
+        
+        function viewPaper(index) {
+            if (!currentPdbId || !literatureCache[currentPdbId] || !literatureCache[currentPdbId][index]) {
+                return;
+            }
+            
+            const paper = literatureCache[currentPdbId][index];
+            
+            $('#paper-viewer-title').text(paper.title || 'Paper Details');
+            
+            let content = `
+                <div class="paper-detail">
+                    <h3>${paper.title || 'Untitled'}</h3>
+                    
+                    <div class="detail-section">
+                        <div class="detail-label">Authors</div>
+                        <div class="detail-value">
+                            ${Array.isArray(paper.authors) ? 
+                                paper.authors.map(a => a.name || a).join(', ') : 
+                                (paper.rcsb_authors || []).join(', ') || 'Unknown authors'}
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <div class="detail-label">Journal</div>
+                        <div class="detail-value">${paper.journal || 'Unknown journal'}</div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <div class="detail-label">Year</div>
+                        <div class="detail-value">${paper.year || 'Unknown'}</div>
+                    </div>
+                    
+                    ${paper.doi ? `
+                        <div class="detail-section">
+                            <div class="detail-label">DOI</div>
+                            <div class="detail-value">
+                                <a href="https://doi.org/${paper.doi}" target="_blank" style="color: #51cf66;">
+                                    ${paper.doi}
+                                </a>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${paper.pubmed_id ? `
+                        <div class="detail-section">
+                            <div class="detail-label">PubMed ID</div>
+                            <div class="detail-value">
+                                <a href="https://pubmed.ncbi.nlm.nih.gov/${paper.pubmed_id}/" target="_blank" style="color: #51cf66;">
+                                    ${paper.pubmed_id}
+                                </a>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${paper.abstract ? `
+                        <div class="detail-section">
+                            <div class="detail-label">Abstract</div>
+                            <div class="detail-value" style="line-height: 1.6; color: #cccccc;">
+                                ${paper.abstract}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            $('#paper-viewer-body').html(content);
+            $('#paper-viewer').fadeIn(200);
+        }
+        
+        function closePaperViewer() {
+            $('#paper-viewer').fadeOut(200);
+        }
     </script>
 </body>
 </html>
