@@ -897,6 +897,169 @@
             right: 0;
             transition: none;
         }
+
+        /* Atom table styles for tab integration */
+
+        .atom-controls {
+            padding: 10px 20px;
+            background: #262626;
+            border-bottom: 1px solid #333;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .atom-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .atom-filter-label {
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .atom-filter-select {
+            background: #1a1a1a;
+            border: 1px solid #555;
+            color: #ddd;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        .atom-stats {
+            margin-left: auto;
+            font-size: 11px;
+            color: #888;
+        }
+
+        .atom-table-container {
+            flex: 1;
+            background: #0f0f0f;
+            position: relative;
+            contain: layout style paint;
+        }
+
+        .atom-table-header {
+            display: flex;
+            background: #2a2a2a;
+            border-bottom: 2px solid #555;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .atom-table-header-cell {
+            padding: 8px 6px;
+            color: #fff;
+            border-right: 1px solid #555;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .atom-table-header-cell:nth-child(1) { width: 80px; min-width: 80px; } /* Serial */
+        .atom-table-header-cell:nth-child(2) { width: 70px; min-width: 70px; } /* Type */
+        .atom-table-header-cell:nth-child(3) { width: 80px; min-width: 80px; } /* Atom */
+        .atom-table-header-cell:nth-child(4) { width: 70px; min-width: 70px; } /* Res */
+        .atom-table-header-cell:nth-child(5) { width: 60px; min-width: 60px; } /* Chain */
+        .atom-table-header-cell:nth-child(6) { width: 70px; min-width: 70px; } /* Res# */
+        .atom-table-header-cell:nth-child(7) { width: 90px; min-width: 90px; } /* X */
+        .atom-table-header-cell:nth-child(8) { width: 90px; min-width: 90px; } /* Y */
+        .atom-table-header-cell:nth-child(9) { width: 90px; min-width: 90px; } /* Z */
+        .atom-table-header-cell:nth-child(10) { width: 70px; min-width: 70px; } /* Occ */
+        .atom-table-header-cell:nth-child(11) { width: 70px; min-width: 70px; } /* B-fact */
+        .atom-table-header-cell:nth-child(12) { width: 60px; min-width: 60px; } /* Element */
+
+        .atom-table-viewport {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            background: #0f0f0f;
+            height: 100%;
+            min-height: 300px;
+            max-height: calc(100vh - 300px);
+            /* Force hardware acceleration */
+            will-change: scroll-position;
+            transform: translateZ(0);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .atom-table-content {
+            position: relative;
+        }
+
+        .atom-table-row {
+            display: flex;
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 22px;
+            border-bottom: 1px solid #333;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            transition: background-color 0.1s;
+        }
+
+        .atom-table-row:nth-child(even) {
+            background: #1a1a1a;
+        }
+
+        .atom-table-row:hover {
+            background: #2a2a2a !important;
+        }
+
+        .atom-table-row.atom-type {
+            border-left: 3px solid #4a9eff;
+        }
+
+        .atom-table-row.hetatm-type {
+            border-left: 3px solid #ff6b6b;
+        }
+
+        .atom-table-cell {
+            padding: 3px 6px;
+            color: #ddd;
+            border-right: 1px solid #333;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .atom-table-cell:nth-child(1) { width: 80px; min-width: 80px; }
+        .atom-table-cell:nth-child(2) { width: 70px; min-width: 70px; }
+        .atom-table-cell:nth-child(3) { width: 80px; min-width: 80px; }
+        .atom-table-cell:nth-child(4) { width: 70px; min-width: 70px; }
+        .atom-table-cell:nth-child(5) { width: 60px; min-width: 60px; }
+        .atom-table-cell:nth-child(6) { width: 70px; min-width: 70px; }
+        .atom-table-cell:nth-child(7) { width: 90px; min-width: 90px; }
+        .atom-table-cell:nth-child(8) { width: 90px; min-width: 90px; }
+        .atom-table-cell:nth-child(9) { width: 90px; min-width: 90px; }
+        .atom-table-cell:nth-child(10) { width: 70px; min-width: 70px; }
+        .atom-table-cell:nth-child(11) { width: 70px; min-width: 70px; }
+        .atom-table-cell:nth-child(12) { width: 60px; min-width: 60px; }
+
+        .atom-serial { font-weight: 500; color: #88ccff; }
+        .atom-name { font-weight: 600; color: #ffaa44; }
+        .residue-name { color: #51cf66; font-weight: 500; }
+        .chain-id { color: #ff9f43; font-weight: 600; }
+        .coordinate { color: #feca57; text-align: right; font-family: 'Courier New', monospace; }
+        .factor { color: #ff6b9d; text-align: right; }
+        .element { color: #c44569; font-weight: 600; text-align: center; }
     </style>
 </head>
 <body>
@@ -912,6 +1075,7 @@
                                     <button class="tab-button active" onclick="switchTab('3d-view')">3D View</button>
                 <button class="tab-button" onclick="switchTab('literature')">Literature</button>
                 <button class="tab-button" onclick="switchTab('rawpdb')">Raw PDB</button>
+                <button class="tab-button" onclick="switchTab('atoms')">Atoms</button>
                 </div>
                 
                 <div class="tab-content">
@@ -967,6 +1131,65 @@
                                 <div class="no-rawpdb">
                                     <div>No structure loaded</div>
                                     <div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view formatted data</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Atoms Tab -->
+                    <div id="atoms-panel" class="tab-panel">
+                        <div class="rawpdb-container">
+                            <div class="rawpdb-header">
+                                <div class="rawpdb-title" id="atoms-title">Atom Data</div>
+                                <div class="rawpdb-info" id="atoms-info">Load a structure to view atomic coordinates and properties</div>
+                            </div>
+                            <div class="atom-controls">
+                                <div class="atom-filter-group">
+                                    <span class="atom-filter-label">Type:</span>
+                                    <select class="atom-filter-select" id="atom-type-filter" onchange="filterAtomTable()">
+                                        <option value="all">All Atoms</option>
+                                        <option value="ATOM">ATOM only</option>
+                                        <option value="HETATM">HETATM only</option>
+                                    </select>
+                                </div>
+                                <div class="atom-filter-group">
+                                    <span class="atom-filter-label">Chain:</span>
+                                    <select class="atom-filter-select" id="atom-chain-filter" onchange="filterAtomTable()">
+                                        <option value="all">All Chains</option>
+                                    </select>
+                                </div>
+                                <div class="atom-filter-group">
+                                    <span class="atom-filter-label">Element:</span>
+                                    <select class="atom-filter-select" id="atom-element-filter" onchange="filterAtomTable()">
+                                        <option value="all">All Elements</option>
+                                    </select>
+                                </div>
+                                <div class="atom-stats" id="atom-stats">
+                                    No atoms loaded
+                                </div>
+                            </div>
+                            <div class="atom-table-container">
+                                <div class="atom-table-header">
+                                    <div class="atom-table-header-cell">Serial</div>
+                                    <div class="atom-table-header-cell">Type</div>
+                                    <div class="atom-table-header-cell">Atom</div>
+                                    <div class="atom-table-header-cell">Res</div>
+                                    <div class="atom-table-header-cell">Chain</div>
+                                    <div class="atom-table-header-cell">Res#</div>
+                                    <div class="atom-table-header-cell">X</div>
+                                    <div class="atom-table-header-cell">Y</div>
+                                    <div class="atom-table-header-cell">Z</div>
+                                    <div class="atom-table-header-cell">Occ</div>
+                                    <div class="atom-table-header-cell">B-fact</div>
+                                    <div class="atom-table-header-cell">Elem</div>
+                                </div>
+                                <div class="atom-table-viewport" id="atom-table-viewport">
+                                    <div class="atom-table-content" id="atom-table-content">
+                                        <div class="no-rawpdb">
+                                            <div>No structure loaded</div>
+                                            <div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view atomic data</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1066,6 +1289,8 @@
             </div>
         </div>
     </div>
+
+
 
     <!-- include required libraries with defer for performance -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" defer></script>
@@ -1255,6 +1480,23 @@
             header: null
         };
         
+        // atom table variables
+        let atomTable = {
+            data: [],
+            filteredData: [],
+            currentTypeFilter: 'all',
+            currentChainFilter: 'all',
+            currentElementFilter: 'all',
+            rowHeight: 22,
+            containerHeight: 0,
+            startIndex: 0,
+            endIndex: 0,
+            buffer: 20,
+            container: null,
+            viewport: null,
+            isParsing: false  // Flag to prevent duplicate parsing
+        };
+        
         // Progressive loading for better performance
         document.addEventListener('DOMContentLoaded', function() {
             // Core functionality first
@@ -1275,11 +1517,16 @@
                 initializeAdvancedFeatures();
             }, 500);
             
-            // Handle window resize for fast grid
+            // Handle window resize for fast grid and atom table
             window.addEventListener('resize', PerformanceManager.debounce(() => {
                 if (fastGrid.viewport) {
                     updateFastGridDimensions();
                     updateFastGridView();
+                }
+                
+                if (atomTable.viewport) {
+                    updateAtomTableDimensions();
+                    updateAtomTableView();
                 }
                 
                 if (viewer) {
@@ -1535,6 +1782,10 @@
                 clearLiterature();
                 clearRawPdb();
                 
+                // Clear atom data to prevent duplication
+                atomTable.data = [];
+                atomTable.filteredData = [];
+                
                 // Add the molecular data to the viewer
                 currentModel = viewer.addModel(data, 'pdb');
                 
@@ -1550,6 +1801,9 @@
                 updateMolecularStats(currentModel);
                 fetchLiterature(pdbId);
                 displayRawPdb(data, pdbId);
+                
+                // Parse atom data for atom table
+                parseAtomData(data);
                 
                 showMessage(`${pdbId} loaded successfully`, 'success');
             } catch (error) {
@@ -1583,6 +1837,10 @@
                     // Clear previous model
                     viewer.removeAllModels();
                     
+                    // Clear atom data to prevent duplication
+                    atomTable.data = [];
+                    atomTable.filteredData = [];
+                    
                     // Add the molecular data to the viewer
                     currentModel = viewer.addModel(data, 'pdb');
                     
@@ -1598,6 +1856,9 @@
                     clearLiterature();
                     clearRawPdb();
                     displayRawPdb(data, null);
+                    
+                    // Parse atom data for atom table
+                    parseAtomData(data);
                     
                     updateMolecularStats(currentModel);
                     showMessage(`${file.name} loaded successfully`, 'success');
@@ -1676,6 +1937,22 @@
                         btn.textContent = 'Interactive Mode: OFF';
                         btn.style.background = '#2a2a2a';
                     }
+                }
+                
+                // Clear atom data
+                atomTable.data = [];
+                atomTable.filteredData = [];
+                atomTable.isParsing = false;
+                
+                // Reset atoms tab
+                const atomsTitle = document.getElementById('atoms-title');
+                const atomsInfo = document.getElementById('atoms-info');
+                const atomsContent = document.getElementById('atom-table-content');
+                
+                if (atomsTitle) atomsTitle.textContent = 'Atom Data';
+                if (atomsInfo) atomsInfo.textContent = 'Load a structure to view atomic coordinates and properties';
+                if (atomsContent) {
+                    atomsContent.innerHTML = '<div class="no-rawpdb"><div>No structure loaded</div><div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view atomic data</div></div>';
                 }
                 
                 // Clean up resources
@@ -2095,6 +2372,23 @@
                     updateFastGridView();
                 }, 100);
             }
+            
+                    // if switching to atoms tab, initialize and update table
+        if (tabName === 'atoms') {
+            setTimeout(() => {
+                if (atomTable.data.length > 0) {
+                    initializeAtomTable();
+                    // Force dimension update after tab is fully visible
+                    setTimeout(() => {
+                        updateAtomTableDimensions();
+                        updateAtomTableView();
+                    }, 50);
+                    console.log('Atoms tab activated with data');
+                } else {
+                    console.log('Atoms tab activated but no data available');
+                }
+            }, 100);
+        }
         }
         
         // Literature functions
@@ -2561,6 +2855,337 @@
         function filterPdbRecords(recordType) {
             // legacy function - redirect to fast grid
             fastGridFilter(recordType);
+        }
+
+        // Atom table functions
+        function parseAtomData(pdbData) {
+            // Prevent duplicate parsing
+            if (atomTable.isParsing) {
+                console.log('parseAtomData called while already parsing, skipping...');
+                return;
+            }
+            
+            atomTable.isParsing = true;
+            const lines = pdbData.split('\n');
+            
+            // Clear any existing atom data to prevent duplication
+            atomTable.data = [];
+            atomTable.filteredData = [];
+            
+            console.log(`Starting parseAtomData with ${lines.length} lines`);
+            
+            lines.forEach((line, index) => {
+                // Skip empty lines
+                if (!line.trim()) return;
+                
+                const recordType = line.substring(0, 6).trim();
+                
+                if (recordType === 'ATOM' || recordType === 'HETATM') {
+                    try {
+                        // Validate line length (PDB format requires at least 80 characters for ATOM/HETATM)
+                        if (line.length < 30) {
+                            console.warn(`Line ${index + 1} too short for ATOM/HETATM record: "${line}"`);
+                            return;
+                        }
+                        
+                        // Parse PDB ATOM/HETATM record format
+                        const atomRecord = {
+                            lineNumber: index + 1,
+                            recordType: recordType,
+                            serial: parseInt(line.substring(6, 11).trim()) || 0,
+                            atomName: line.substring(12, 16).trim(),
+                            altLoc: line.substring(16, 17).trim(),
+                            resName: line.substring(17, 20).trim(),
+                            chainId: line.substring(21, 22).trim(),
+                            resSeq: parseInt(line.substring(22, 26).trim()) || 0,
+                            iCode: line.substring(26, 27).trim(),
+                            x: parseFloat(line.substring(30, 38).trim()) || 0.0,
+                            y: parseFloat(line.substring(38, 46).trim()) || 0.0,
+                            z: parseFloat(line.substring(46, 54).trim()) || 0.0,
+                            occupancy: line.length >= 60 ? (parseFloat(line.substring(54, 60).trim()) || 1.0) : 1.0,
+                            tempFactor: line.length >= 66 ? (parseFloat(line.substring(60, 66).trim()) || 0.0) : 0.0,
+                            element: line.length >= 78 ? line.substring(76, 78).trim() : 
+                                    line.substring(12, 14).trim().replace(/[0-9]/g, '').trim(),
+                            charge: line.length >= 80 ? line.substring(78, 80).trim() : ''
+                        };
+                        
+                        // Validate that we have meaningful data
+                        if (atomRecord.atomName && atomRecord.resName) {
+                            atomTable.data.push(atomRecord);
+                        } else {
+                            console.warn(`Invalid atom record at line ${index + 1}: missing atomName or resName`);
+                        }
+                    } catch (error) {
+                        console.warn(`Error parsing atom record at line ${index + 1}:`, error);
+                    }
+                }
+            });
+            
+            atomTable.filteredData = [...atomTable.data];
+            
+            // Count records by type
+            const atomCount = atomTable.data.filter(a => a.recordType === 'ATOM').length;
+            const hetatmCount = atomTable.data.filter(a => a.recordType === 'HETATM').length;
+            
+            console.log(`Parsed ${atomTable.data.length} total atom records: ${atomCount} ATOM, ${hetatmCount} HETATM`);
+            
+            // Update atoms tab with data
+            const atomsTitle = document.getElementById('atoms-title');
+            const atomsInfo = document.getElementById('atoms-info');
+            const atomsContent = document.getElementById('atom-table-content');
+            
+            if (atomsTitle && atomTable.data.length > 0) {
+                atomsTitle.textContent = `Atom Data - ${atomTable.data.length.toLocaleString()} atoms`;
+            }
+            
+            if (atomsInfo && atomTable.data.length > 0) {
+                atomsInfo.textContent = `${atomCount.toLocaleString()} ATOM records, ${hetatmCount.toLocaleString()} HETATM records`;
+            }
+            
+            // Clear the "no data" message
+            if (atomsContent && atomTable.data.length > 0) {
+                atomsContent.innerHTML = '';
+            }
+            
+            // Reset parsing flag
+            atomTable.isParsing = false;
+        }
+        
+
+        
+        function initializeAtomTable() {
+            const container = document.getElementById('atom-table-content');
+            const viewport = document.getElementById('atom-table-viewport');
+            
+            if (!container || !viewport || atomTable.data.length === 0) return;
+            
+            atomTable.container = container;
+            atomTable.viewport = viewport;
+            
+            // Clear any existing scroll listeners
+            viewport.onscroll = null;
+            
+            // Ensure viewport has proper styling for scrolling
+            viewport.style.overflow = 'auto';
+            viewport.style.height = '100%';
+            viewport.style.minHeight = '300px';
+            
+            // Set up scroll listener with throttling
+            let isScrolling = false;
+            const scrollHandler = () => {
+                if (!isScrolling) {
+                    requestAnimationFrame(() => {
+                        updateAtomTableView();
+                        isScrolling = false;
+                    });
+                    isScrolling = true;
+                }
+            };
+            
+            viewport.addEventListener('scroll', scrollHandler, { passive: true });
+            
+            // Store the handler for cleanup
+            atomTable.scrollHandler = scrollHandler;
+            
+            // Initialize filter options
+            populateAtomFilters();
+            
+            // Wait for layout to stabilize before initial render
+            requestAnimationFrame(() => {
+                updateAtomTableDimensions();
+                updateAtomTableView();
+                updateAtomStats();
+            });
+            
+            console.log(`Initialized atom table with ${atomTable.data.length} atoms`);
+        }
+        
+        function populateAtomFilters() {
+            // Get unique chains
+            const chains = [...new Set(atomTable.data.map(atom => atom.chainId))].filter(Boolean).sort();
+            const chainSelect = document.getElementById('atom-chain-filter');
+            if (chainSelect) {
+                chainSelect.innerHTML = '<option value="all">All Chains</option>' +
+                    chains.map(chain => `<option value="${chain}">Chain ${chain}</option>`).join('');
+            }
+            
+            // Get unique elements
+            const elements = [...new Set(atomTable.data.map(atom => atom.element))].filter(Boolean).sort();
+            const elementSelect = document.getElementById('atom-element-filter');
+            if (elementSelect) {
+                elementSelect.innerHTML = '<option value="all">All Elements</option>' +
+                    elements.map(element => `<option value="${element}">${element}</option>`).join('');
+            }
+        }
+        
+        function updateAtomTableDimensions() {
+            if (!atomTable.viewport) return;
+            
+            // Force a layout recalculation
+            atomTable.viewport.style.display = 'none';
+            atomTable.viewport.offsetHeight; // Trigger reflow
+            atomTable.viewport.style.display = '';
+            
+            atomTable.containerHeight = atomTable.viewport.clientHeight;
+            
+            console.log(`Atom table viewport dimensions: ${atomTable.viewport.clientWidth}x${atomTable.containerHeight}`);
+            
+            // If still no height, try to get from parent
+            if (atomTable.containerHeight === 0) {
+                const parent = atomTable.viewport.parentElement;
+                if (parent) {
+                    atomTable.containerHeight = parent.clientHeight - 100; // Account for header and controls
+                    atomTable.viewport.style.height = `${atomTable.containerHeight}px`;
+                }
+            }
+        }
+        
+        function updateAtomTableView() {
+            if (!atomTable.viewport || !atomTable.container || atomTable.filteredData.length === 0) {
+                console.log('Atom table view update skipped - missing elements or no data');
+                return;
+            }
+            
+            const scrollTop = atomTable.viewport.scrollTop;
+            const viewportHeight = atomTable.viewport.clientHeight;
+            const totalHeight = atomTable.filteredData.length * atomTable.rowHeight;
+            
+            // Ensure viewport has proper height
+            if (viewportHeight === 0) {
+                console.log('Viewport height is 0, deferring update');
+                setTimeout(() => updateAtomTableView(), 50);
+                return;
+            }
+            
+            // Calculate visible range
+            const visibleRows = Math.ceil(viewportHeight / atomTable.rowHeight);
+            const startRow = Math.floor(scrollTop / atomTable.rowHeight);
+            const endRow = Math.min(atomTable.filteredData.length - 1, startRow + visibleRows);
+            
+            // Add buffer
+            atomTable.startIndex = Math.max(0, startRow - atomTable.buffer);
+            atomTable.endIndex = Math.min(atomTable.filteredData.length, endRow + atomTable.buffer);
+            
+            // Set container height to create proper scrollable area
+            atomTable.container.style.height = `${totalHeight}px`;
+            atomTable.container.style.position = 'relative';
+            atomTable.container.style.width = '100%';
+            
+            // Clear existing rows
+            atomTable.container.innerHTML = '';
+            
+            // Create a document fragment for better performance
+            const fragment = document.createDocumentFragment();
+            
+            // Render visible rows
+            for (let i = atomTable.startIndex; i < atomTable.endIndex; i++) {
+                const atom = atomTable.filteredData[i];
+                if (!atom) continue;
+                
+                const rowElement = createAtomTableRow(atom, i);
+                fragment.appendChild(rowElement);
+            }
+            
+            atomTable.container.appendChild(fragment);
+            
+            // Debug info (only log occasionally to avoid spam)
+            if (Math.random() < 0.1) {
+                console.log(`Atom table: rows ${atomTable.startIndex}-${atomTable.endIndex} of ${atomTable.filteredData.length}, viewport: ${viewportHeight}px, scroll: ${scrollTop}px`);
+            }
+        }
+        
+        function createAtomTableRow(atom, index) {
+            const row = document.createElement('div');
+            row.className = `atom-table-row ${atom.recordType.toLowerCase()}-type`;
+            row.style.top = `${index * atomTable.rowHeight}px`;
+            
+            // Format coordinates to 3 decimal places
+            const x = atom.x.toFixed(3);
+            const y = atom.y.toFixed(3);
+            const z = atom.z.toFixed(3);
+            
+            row.innerHTML = `
+                <div class="atom-table-cell atom-serial">${atom.serial}</div>
+                <div class="atom-table-cell">${atom.recordType}</div>
+                <div class="atom-table-cell atom-name">${atom.atomName}</div>
+                <div class="atom-table-cell residue-name">${atom.resName}</div>
+                <div class="atom-table-cell chain-id">${atom.chainId || '-'}</div>
+                <div class="atom-table-cell">${atom.resSeq}</div>
+                <div class="atom-table-cell coordinate">${x}</div>
+                <div class="atom-table-cell coordinate">${y}</div>
+                <div class="atom-table-cell coordinate">${z}</div>
+                <div class="atom-table-cell factor">${atom.occupancy.toFixed(2)}</div>
+                <div class="atom-table-cell factor">${atom.tempFactor.toFixed(2)}</div>
+                <div class="atom-table-cell element">${atom.element}</div>
+            `;
+            
+            return row;
+        }
+        
+        function filterAtomTable() {
+            const typeFilter = document.getElementById('atom-type-filter')?.value || 'all';
+            const chainFilter = document.getElementById('atom-chain-filter')?.value || 'all';
+            const elementFilter = document.getElementById('atom-element-filter')?.value || 'all';
+            
+            atomTable.currentTypeFilter = typeFilter;
+            atomTable.currentChainFilter = chainFilter;
+            atomTable.currentElementFilter = elementFilter;
+            
+            // Apply filters
+            atomTable.filteredData = atomTable.data.filter(atom => {
+                if (typeFilter !== 'all' && atom.recordType !== typeFilter) return false;
+                if (chainFilter !== 'all' && atom.chainId !== chainFilter) return false;
+                if (elementFilter !== 'all' && atom.element !== elementFilter) return false;
+                return true;
+            });
+            
+            // Reset scroll position
+            if (atomTable.viewport) {
+                atomTable.viewport.scrollTop = 0;
+            }
+            
+            // Update view
+            updateAtomTableView();
+            updateAtomStats();
+        }
+        
+        function updateAtomStats() {
+            const statsElement = document.getElementById('atom-stats');
+            if (!statsElement) return;
+            
+            const totalAtoms = atomTable.data.length;
+            const filteredAtoms = atomTable.filteredData.length;
+            const atomCount = atomTable.data.filter(a => a.recordType === 'ATOM').length;
+            const hetatmCount = atomTable.data.filter(a => a.recordType === 'HETATM').length;
+            
+            if (filteredAtoms !== totalAtoms) {
+                statsElement.textContent = `Showing ${filteredAtoms.toLocaleString()} of ${totalAtoms.toLocaleString()} atoms`;
+            } else {
+                statsElement.textContent = `${totalAtoms.toLocaleString()} atoms (${atomCount.toLocaleString()} ATOM, ${hetatmCount.toLocaleString()} HETATM)`;
+            }
+        }
+        
+        // Debug function to check atom table state
+        function debugAtomTable() {
+            console.log('=== Atom Table Debug ===');
+            console.log('Data length:', atomTable.data.length);
+            console.log('Filtered data length:', atomTable.filteredData.length);
+            console.log('Viewport element:', atomTable.viewport);
+            console.log('Container element:', atomTable.container);
+            
+            if (atomTable.viewport) {
+                console.log('Viewport height:', atomTable.viewport.clientHeight);
+                console.log('Viewport scroll:', atomTable.viewport.scrollTop);
+            }
+            
+            if (atomTable.container) {
+                console.log('Container height:', atomTable.container.style.height);
+                console.log('Container children:', atomTable.container.children.length);
+            }
+            
+            console.log('Start index:', atomTable.startIndex);
+            console.log('End index:', atomTable.endIndex);
+            console.log('========================');
         }
     </script>
 </body>
