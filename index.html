@@ -30,6 +30,7 @@
             display: flex;
             flex-direction: column;
             background: #111111;
+            position: relative;
         }
         
         .controls-section {
@@ -252,6 +253,102 @@
         .controls-section::-webkit-scrollbar-thumb:hover {
             background: #555555;
         }
+        
+        /* amino acid detail modal */
+        .amino-acid-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            max-height: calc(100vh - 120px);
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: none;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333333;
+            padding-bottom: 10px;
+        }
+        
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: #aaaaaa;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            margin: 0;
+        }
+        
+        .modal-close:hover {
+            color: #ffffff;
+        }
+        
+        .amino-acid-structure {
+            text-align: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: #262626;
+            border-radius: 6px;
+            border: 1px solid #333333;
+        }
+        
+        .structure-img {
+            max-width: 100%;
+            height: auto;
+            background: white;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .amino-acid-info {
+            margin-top: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .info-label {
+            color: #aaaaaa;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #ffffff;
+            font-weight: 400;
+        }
+        
+        .amino-acid-description {
+            margin-top: 15px;
+            padding: 12px;
+            background: #262626;
+            border-radius: 6px;
+            border-left: 3px solid #555555;
+            font-size: 11px;
+            color: #cccccc;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -264,6 +361,26 @@
             <div id="viewer-container"></div>
             <div id="status-display" class="status-display">
                 Ready to load molecular structure...
+            </div>
+            
+            <!-- amino acid detail modal -->
+            <div id="amino-acid-modal" class="amino-acid-modal">
+                <div class="modal-header">
+                    <div class="modal-title" id="modal-title">Amino Acid Details</div>
+                    <button class="modal-close" onclick="closeAminoAcidModal()">&times;</button>
+                </div>
+                
+                <div class="amino-acid-structure" id="amino-acid-structure">
+                    <div id="structure-placeholder">Select an amino acid to view its structure</div>
+                </div>
+                
+                <div class="amino-acid-info" id="amino-acid-info">
+                    <!-- amino acid information will be populated here -->
+                </div>
+                
+                <div class="amino-acid-description" id="amino-acid-description">
+                    <!-- amino acid description will be populated here -->
+                </div>
             </div>
         </div>
         
@@ -325,6 +442,7 @@
                 <button onclick="centerView()">Center View</button>
                 <button onclick="clearViewer()">Clear</button>
                 <button onclick="toggleFullscreen()">Fullscreen</button>
+                <button id="interactive-btn" onclick="toggleInteractiveMode()">Interactive Mode: OFF</button>
             </div>
             
             <div class="control-panel">
@@ -336,6 +454,8 @@
                     <div class="stat-line"><span>Residues:</span><span class="stat-value">--</span></div>
                 </div>
             </div>
+            
+
         </div>
     </div>
 
@@ -346,6 +466,8 @@
     <script>
         let viewer;
         let currentModel;
+        let interactiveMode = false;
+        let selectedAtoms = [];
         
         $(document).ready(function() {
             // initialize the 3dmol.js viewer
@@ -498,6 +620,12 @@
             
             // apply the style
             viewer.setStyle({}, styleObj);
+            
+            // re-enable click handling if interactive mode is on
+            if (interactiveMode) {
+                enableClickHandling();
+            }
+            
             viewer.render();
         }
         
@@ -514,8 +642,18 @@
                 viewer.removeAllModels();
                 viewer.render();
                 currentModel = null;
+                selectedAtoms = [];
                 updateMolecularStats(null);
+                closeAminoAcidModal();
                 showMessage('Display cleared');
+                
+                // turn off interactive mode
+                if (interactiveMode) {
+                    interactiveMode = false;
+                    const btn = $('#interactive-btn');
+                    btn.text('Interactive Mode: OFF');
+                    btn.css('background', '#2a2a2a');
+                }
             }
         }
         
@@ -525,6 +663,340 @@
             } else {
                 document.exitFullscreen();
             }
+        }
+        
+        function toggleInteractiveMode() {
+            interactiveMode = !interactiveMode;
+            const btn = $('#interactive-btn');
+            
+            if (interactiveMode) {
+                btn.text('Interactive Mode: ON');
+                btn.css('background', '#333333');
+                enableClickHandling();
+                showMessage('Interactive mode enabled - click on amino acids to explore', 'success');
+            } else {
+                btn.text('Interactive Mode: OFF');
+                btn.css('background', '#2a2a2a');
+                disableClickHandling();
+                closeAminoAcidModal();
+                showMessage('Interactive mode disabled', 'info');
+            }
+        }
+        
+        function enableClickHandling() {
+            if (!currentModel) return;
+            
+            // set up click handling for all atoms
+            viewer.setClickable({}, true, function(atom, viewer, event, container) {
+                if (interactiveMode) {
+                    handleAtomClick(atom);
+                }
+            });
+            
+            viewer.render();
+        }
+        
+        function disableClickHandling() {
+            if (!currentModel) return;
+            
+            // clear previous selections
+            clearAtomSelection();
+            
+            // remove click handlers
+            viewer.setClickable({}, false);
+            viewer.render();
+        }
+        
+        function handleAtomClick(atom) {
+            // clear previous selection
+            clearAtomSelection();
+            
+            // highlight the clicked residue
+            const residueSelector = {
+                chain: atom.chain,
+                resi: atom.resi
+            };
+            
+            // add glowing highlight to the residue
+            viewer.addStyle(residueSelector, {
+                stick: {
+                    color: '#ffff00',
+                    radius: 0.4
+                },
+                sphere: {
+                    color: '#ffff00',
+                    radius: 0.6,
+                    alpha: 0.8
+                }
+            });
+            
+            // store selected atoms for later clearing
+            selectedAtoms = currentModel.selectedAtoms(residueSelector);
+            
+            viewer.render();
+            
+            // show amino acid details in modal
+            showAminoAcidDetails(atom);
+            
+            showMessage(`Selected: ${getResidueFullName(atom.resn)} in chain ${atom.chain}`, 'success');
+        }
+        
+        function clearAtomSelection() {
+            if (selectedAtoms.length > 0) {
+                selectedAtoms = [];
+                // reapply the current style to remove highlights
+                updateStyle();
+            }
+        }
+        
+        function showAminoAcidDetails(atom) {
+            const residueCode = atom.resn;
+            const residueName = getResidueFullName(residueCode);
+            const residueData = getAminoAcidData(residueCode);
+            
+            // update modal title
+            $('#modal-title').text(`${residueName} (${residueCode})`);
+            
+            // show structure
+            $('#amino-acid-structure').html(`
+                <div style="font-size: 14px; color: #ffffff; margin-bottom: 10px;">Chemical Structure</div>
+                <div style="font-family: monospace; font-size: 24px; color: #00ff88; background: #000; padding: 15px; border-radius: 4px;">
+                    ${residueData.structure}
+                </div>
+            `);
+            
+            // show information
+            $('#amino-acid-info').html(`
+                <div class="info-item">
+                    <span class="info-label">Full Name:</span>
+                    <span class="info-value">${residueName}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Code:</span>
+                    <span class="info-value">${residueCode}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Chain:</span>
+                    <span class="info-value">${atom.chain || 'unknown'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Position:</span>
+                    <span class="info-value">${atom.resi || 'unknown'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value">${residueData.type}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Properties:</span>
+                    <span class="info-value">${residueData.properties}</span>
+                </div>
+            `);
+            
+            // show description
+            $('#amino-acid-description').text(residueData.description);
+            
+            // show modal
+            $('#amino-acid-modal').fadeIn(200);
+        }
+        
+        function closeAminoAcidModal() {
+            $('#amino-acid-modal').fadeOut(200);
+        }
+        
+        function getAminoAcidData(resn) {
+            const aminoAcidData = {
+                'ALA': {
+                    structure: 'H₃N⁺-CH(CH₃)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, hydrophobic',
+                    description: 'Alanine is the simplest amino acid after glycine. Its methyl side chain is nonpolar and hydrophobic, making it commonly found in the interior of proteins.'
+                },
+                'ARG': {
+                    structure: 'H₃N⁺-CH(CH₂₃-NH-C(NH₂)₂⁺)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Positively charged, basic',
+                    description: 'Arginine has a positively charged guanidino group, making it basic and hydrophilic. Often found on protein surfaces and involved in binding negatively charged molecules.'
+                },
+                'ASN': {
+                    structure: 'H₃N⁺-CH(CH₂-CONH₂)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Polar, uncharged',
+                    description: 'Asparagine has an amide group that can form hydrogen bonds. Common in protein surfaces and often involved in protein-protein interactions.'
+                },
+                'ASP': {
+                    structure: 'H₃N⁺-CH(CH₂-COO⁻)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Negatively charged, acidic',
+                    description: 'Aspartic acid has a carboxyl group that is negatively charged at physiological pH. Often found on protein surfaces and involved in binding positively charged molecules.'
+                },
+                'CYS': {
+                    structure: 'H₃N⁺-CH(CH₂-SH)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Polar, forms disulfide bonds',
+                    description: 'Cysteine contains a sulfur atom that can form disulfide bonds with other cysteines, providing structural stability to proteins.'
+                },
+                'GLN': {
+                    structure: 'H₃N⁺-CH(CH₂₂-CONH₂)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Polar, uncharged',
+                    description: 'Glutamine has an amide group and is similar to asparagine but with a longer side chain. Important for protein folding and stability.'
+                },
+                'GLU': {
+                    structure: 'H₃N⁺-CH(CH₂₂-COO⁻)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Negatively charged, acidic',
+                    description: 'Glutamic acid is similar to aspartic acid but with a longer side chain. Key in enzyme active sites and protein-protein interactions.'
+                },
+                'GLY': {
+                    structure: 'H₃N⁺-CH₂-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Flexible, smallest',
+                    description: 'Glycine is the smallest amino acid with just a hydrogen atom as its side chain. Provides flexibility in protein structures and often found in turns.'
+                },
+                'HIS': {
+                    structure: 'H₃N⁺-CH(CH₂-imidazole)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Positively charged, basic',
+                    description: 'Histidine has an imidazole ring that can be positively charged. Often found in enzyme active sites due to its ability to donate and accept protons.'
+                },
+                'ILE': {
+                    structure: 'H₃N⁺-CH(CH(CH₃)CH₂CH₃)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, hydrophobic',
+                    description: 'Isoleucine is a branched, hydrophobic amino acid. Important for protein structure and commonly found in the hydrophobic core of proteins.'
+                },
+                'LEU': {
+                    structure: 'H₃N⁺-CH(CH₂CH(CH₃)₂)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, hydrophobic',
+                    description: 'Leucine is a branched, hydrophobic amino acid. Very common in proteins and important for maintaining protein structure through hydrophobic interactions.'
+                },
+                'LYS': {
+                    structure: 'H₃N⁺-CH(CH₂₄-NH₃⁺)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Positively charged, basic',
+                    description: 'Lysine has a positively charged amino group. Often found on protein surfaces and involved in binding DNA and other negatively charged molecules.'
+                },
+                'MET': {
+                    structure: 'H₃N⁺-CH(CH₂₂-S-CH₃)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, hydrophobic',
+                    description: 'Methionine contains sulfur and is often the starting amino acid in protein synthesis. Important for protein folding and structure.'
+                },
+                'PHE': {
+                    structure: 'H₃N⁺-CH(CH₂-benzene)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, aromatic',
+                    description: 'Phenylalanine has a large aromatic benzene ring. Hydrophobic and often involved in protein-protein interactions through π-π stacking.'
+                },
+                'PRO': {
+                    structure: 'H₂N⁺-cyclic-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Rigid, cyclic',
+                    description: 'Proline has a unique cyclic structure that restricts backbone flexibility. Often found in turns and can disrupt secondary structures.'
+                },
+                'SER': {
+                    structure: 'H₃N⁺-CH(CH₂-OH)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Polar, uncharged',
+                    description: 'Serine has a hydroxyl group that can form hydrogen bonds. Often phosphorylated for regulatory purposes and common in enzyme active sites.'
+                },
+                'THR': {
+                    structure: 'H₃N⁺-CH(CH(OH)CH₃)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Polar, uncharged',
+                    description: 'Threonine has a hydroxyl group like serine but with an additional methyl group. Can be phosphorylated and involved in protein regulation.'
+                },
+                'TRP': {
+                    structure: 'H₃N⁺-CH(CH₂-indole)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, aromatic',
+                    description: 'Tryptophan has the largest side chain with an indole ring. Highly hydrophobic and often involved in protein-membrane interactions.'
+                },
+                'TYR': {
+                    structure: 'H₃N⁺-CH(CH₂-phenol)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Polar, aromatic',
+                    description: 'Tyrosine has a phenol group that can form hydrogen bonds. Can be phosphorylated for signaling and involved in protein-protein interactions.'
+                },
+                'VAL': {
+                    structure: 'H₃N⁺-CH(CH(CH₃)₂)-COO⁻',
+                    type: 'Amino Acid',
+                    properties: 'Nonpolar, hydrophobic',
+                    description: 'Valine is a branched, hydrophobic amino acid. Important for protein structure and commonly found in the hydrophobic core of proteins.'
+                },
+                'A': {
+                    structure: 'Adenine-Ribose-PO₄',
+                    type: 'RNA Nucleotide',
+                    properties: 'Purine base',
+                    description: 'Adenine nucleotide in RNA. Forms two hydrogen bonds with uracil. Essential for genetic information storage and protein synthesis.'
+                },
+                'U': {
+                    structure: 'Uracil-Ribose-PO₄',
+                    type: 'RNA Nucleotide',
+                    properties: 'Pyrimidine base',
+                    description: 'Uracil nucleotide in RNA. Forms two hydrogen bonds with adenine. Replaces thymine in RNA molecules.'
+                },
+                'G': {
+                    structure: 'Guanine-Ribose-PO₄',
+                    type: 'RNA Nucleotide',
+                    properties: 'Purine base',
+                    description: 'Guanine nucleotide in RNA. Forms three hydrogen bonds with cytosine. Important for genetic stability and gene expression.'
+                },
+                'C': {
+                    structure: 'Cytosine-Ribose-PO₄',
+                    type: 'RNA Nucleotide',
+                    properties: 'Pyrimidine base',
+                    description: 'Cytosine nucleotide in RNA. Forms three hydrogen bonds with guanine. Essential for genetic information and protein synthesis.'
+                },
+                'DA': {
+                    structure: 'Adenine-Deoxyribose-PO₄',
+                    type: 'DNA Nucleotide',
+                    properties: 'Purine base',
+                    description: 'Deoxyadenosine in DNA. Forms two hydrogen bonds with thymine. Essential for genetic information storage.'
+                },
+                'DT': {
+                    structure: 'Thymine-Deoxyribose-PO₄',
+                    type: 'DNA Nucleotide',
+                    properties: 'Pyrimidine base',
+                    description: 'Deoxythymidine in DNA. Forms two hydrogen bonds with adenine. Unique to DNA, replaced by uracil in RNA.'
+                },
+                'DG': {
+                    structure: 'Guanine-Deoxyribose-PO₄',
+                    type: 'DNA Nucleotide',
+                    properties: 'Purine base',
+                    description: 'Deoxyguanosine in DNA. Forms three hydrogen bonds with cytosine. Important for genetic stability.'
+                },
+                'DC': {
+                    structure: 'Cytosine-Deoxyribose-PO₄',
+                    type: 'DNA Nucleotide',
+                    properties: 'Pyrimidine base',
+                    description: 'Deoxycytidine in DNA. Forms three hydrogen bonds with guanine. Essential for genetic information storage.'
+                }
+            };
+            
+            return aminoAcidData[resn] || {
+                structure: 'Structure not available',
+                type: 'Unknown',
+                properties: 'Unknown',
+                description: 'No detailed information available for this residue.'
+            };
+        }
+        
+        function getResidueFullName(resn) {
+            const residueNames = {
+                'ALA': 'Alanine', 'ARG': 'Arginine', 'ASN': 'Asparagine', 'ASP': 'Aspartic Acid',
+                'CYS': 'Cysteine', 'GLN': 'Glutamine', 'GLU': 'Glutamic Acid', 'GLY': 'Glycine',
+                'HIS': 'Histidine', 'ILE': 'Isoleucine', 'LEU': 'Leucine', 'LYS': 'Lysine',
+                'MET': 'Methionine', 'PHE': 'Phenylalanine', 'PRO': 'Proline', 'SER': 'Serine',
+                'THR': 'Threonine', 'TRP': 'Tryptophan', 'TYR': 'Tyrosine', 'VAL': 'Valine',
+                'A': 'Adenine', 'T': 'Thymine', 'G': 'Guanine', 'C': 'Cytosine',
+                'U': 'Uracil', 'DA': 'Deoxyadenosine', 'DT': 'Deoxythymidine', 
+                'DG': 'Deoxyguanosine', 'DC': 'Deoxycytidine'
+            };
+            
+            return residueNames[resn] || resn;
         }
         
         // keyboard shortcuts
