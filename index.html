@@ -117,15 +117,17 @@
             flex-direction: column;
         }
         
-        .tab-panel {
+                .tab-panel {
             display: none;
             height: 100%;
             flex: 1;
+            min-height: 0;
         }
-        
+
         .tab-panel.active {
             display: flex;
             flex-direction: column;
+            min-height: 0;
         }
         
         #viewer-container {
@@ -424,6 +426,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
+            min-height: 0;
         }
         
         .literature-header {
@@ -519,6 +522,257 @@
             font-size: 12px;
             text-align: center;
             flex-direction: column;
+        }
+
+        /* raw pdb tab styles */
+        .rawpdb-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #0f0f0f;
+            min-height: 0;
+        }
+
+        .rawpdb-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            background: #1a1a1a;
+        }
+
+        .rawpdb-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .rawpdb-info {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .rawpdb-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            padding: 0;
+            max-height: calc(100vh - 200px);
+        }
+
+        .no-rawpdb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #888888;
+            font-size: 12px;
+            text-align: center;
+            flex-direction: column;
+        }
+
+        .pdb-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            background: #0f0f0f;
+            table-layout: fixed;
+        }
+
+        .pdb-table th {
+            background: #2a2a2a;
+            color: #fff;
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid #555;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .pdb-table th:nth-child(1) { width: 60px; }
+        .pdb-table th:nth-child(2) { width: 80px; }
+        .pdb-table th:nth-child(3) { width: calc(100% - 140px); }
+
+        .pdb-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #333;
+            color: #ddd;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .pdb-table tr:nth-child(even) {
+            background: #1a1a1a;
+        }
+
+        .pdb-table tr:hover {
+            background: #2a2a2a;
+        }
+
+        .record-type {
+            font-weight: bold;
+            color: #4a9eff;
+        }
+
+        .record-header {
+            background: #333 !important;
+            color: #fff !important;
+            font-weight: bold;
+        }
+
+        .record-atom {
+            color: #ffaa44;
+        }
+
+        .record-hetatm {
+            color: #ff6b6b;
+        }
+
+        .record-conect {
+            color: #51cf66;
+        }
+
+        .pdb-filters {
+            padding: 8px 15px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .pdb-filter-dropdown {
+            background: #2a2a2a;
+            border: 1px solid #555;
+            color: #ddd;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 140px;
+            outline: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23888' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 8px center;
+            background-repeat: no-repeat;
+            background-size: 12px;
+            padding-right: 32px;
+            appearance: none;
+        }
+
+        .pdb-filter-dropdown:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .pdb-filter-dropdown:focus {
+            background: #3a3a3a;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+
+        .pdb-filter-dropdown option {
+            background: #2a2a2a;
+            color: #ddd;
+            padding: 4px;
+        }
+
+        /* fast grid styles */
+        .fast-grid-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #0f0f0f;
+            position: relative;
+        }
+
+        .fast-grid-header {
+            display: flex;
+            background: #2a2a2a;
+            border-bottom: 2px solid #555;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .fast-grid-header-cell {
+            padding: 8px 6px;
+            color: #fff;
+            border-right: 1px solid #555;
+            display: flex;
+            align-items: center;
+        }
+
+        .fast-grid-header-cell:nth-child(1) { width: 60px; min-width: 60px; }
+        .fast-grid-header-cell:nth-child(2) { width: 80px; min-width: 80px; }
+        .fast-grid-header-cell:nth-child(3) { flex: 1; }
+
+        .fast-grid-viewport {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background: #0f0f0f;
+        }
+
+        .fast-grid-content {
+            position: relative;
+        }
+
+        .fast-grid-row {
+            display: flex;
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 24px;
+            border-bottom: 1px solid #333;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            transition: background-color 0.1s;
+        }
+
+        .fast-grid-row:nth-child(even) {
+            background: #1a1a1a;
+        }
+
+        .fast-grid-row:hover {
+            background: #2a2a2a !important;
+        }
+
+        .fast-grid-cell {
+            padding: 4px 6px;
+            color: #ddd;
+            border-right: 1px solid #333;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .fast-grid-cell:nth-child(1) { width: 60px; min-width: 60px; }
+        .fast-grid-cell:nth-child(2) { width: 80px; min-width: 80px; }
+        .fast-grid-cell:nth-child(3) { flex: 1; }
+
+        .fast-grid-stats {
+            padding: 8px 15px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            font-size: 10px;
+            color: #888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fast-grid-performance {
+            font-size: 9px;
+            color: #51cf66;
         }
         
         .paper-viewer {
@@ -617,8 +871,9 @@
             
             <div class="tab-container">
                 <div class="tab-nav">
-                    <button class="tab-button active" onclick="switchTab('3d-view')">3D View</button>
-                    <button class="tab-button" onclick="switchTab('literature')">Literature</button>
+                                    <button class="tab-button active" onclick="switchTab('3d-view')">3D View</button>
+                <button class="tab-button" onclick="switchTab('literature')">Literature</button>
+                <button class="tab-button" onclick="switchTab('rawpdb')">Raw PDB</button>
                 </div>
                 
                 <div class="tab-content">
@@ -658,6 +913,22 @@
                                 <div class="no-literature">
                                     <div>No protein loaded</div>
                                     <div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to see related publications</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Raw PDB Tab -->
+                    <div id="rawpdb-panel" class="tab-panel">
+                        <div class="rawpdb-container">
+                            <div class="rawpdb-header">
+                                <div class="rawpdb-title" id="rawpdb-title">Raw PDB Data</div>
+                                <div class="rawpdb-info" id="rawpdb-info">Load a structure to view formatted PDB data</div>
+                            </div>
+                            <div class="rawpdb-content" id="rawpdb-content">
+                                <div class="no-rawpdb">
+                                    <div>No structure loaded</div>
+                                    <div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view formatted data</div>
                                 </div>
                             </div>
                         </div>
@@ -769,6 +1040,24 @@
         let selectedAtoms = [];
         let currentPdbId = null;
         let literatureCache = {};
+        let rawPdbData = null;
+        
+        // fast grid variables
+        let fastGrid = {
+            data: [],
+            filteredData: [],
+            currentFilter: 'all',
+            visibleRows: [],
+            rowHeight: 24,
+            containerHeight: 0,
+            scrollTop: 0,
+            startIndex: 0,
+            endIndex: 0,
+            buffer: 10,
+            container: null,
+            viewport: null,
+            header: null
+        };
         
         $(document).ready(function() {
             // initialize the 3dmol.js viewer
@@ -776,6 +1065,14 @@
             
             // load default molecule
             loadPDBFromId();
+            
+            // handle window resize for fast grid
+            window.addEventListener('resize', () => {
+                if (fastGrid.viewport) {
+                    updateFastGridDimensions();
+                    updateFastGridView();
+                }
+            });
         });
         
         function initializeViewer() {
@@ -862,6 +1159,7 @@
                         // clear previous model and literature
                         viewer.removeAllModels();
                         clearLiterature();
+                        clearRawPdb();
                         
                         // add the molecular data to the viewer
                         currentModel = viewer.addModel(data, 'pdb');
@@ -877,6 +1175,7 @@
                         currentPdbId = pdbId;
                         updateMolecularStats(currentModel);
                         fetchLiterature(pdbId);
+                        displayRawPdb(data, pdbId);
                         
                         showMessage(`${pdbId} loaded successfully`, 'success');
                     } catch (error) {
@@ -918,6 +1217,8 @@
                     // clear literature for file uploads (no pdb id)
                     currentPdbId = null;
                     clearLiterature();
+                    clearRawPdb();
+                    displayRawPdb(e.target.result, null);
                     
                     updateMolecularStats(currentModel);
                     showMessage(`${file.name} loaded successfully`, 'success');
@@ -977,6 +1278,7 @@
                 updateMolecularStats(null);
                 closeAminoAcidModal();
                 clearLiterature();
+                clearRawPdb();
                 showMessage('Display cleared');
                 
                 // turn off interactive mode
@@ -1367,6 +1669,14 @@
                     viewer.render();
                 }, 100);
             }
+            
+            // if switching to raw pdb, update grid dimensions
+            if (tabName === 'rawpdb' && fastGrid.viewport) {
+                setTimeout(() => {
+                    updateFastGridDimensions();
+                    updateFastGridView();
+                }, 100);
+            }
         }
         
         // literature functions
@@ -1465,6 +1775,10 @@
                         <div class="paper-authors">${authors || 'Unknown authors'}</div>
                         <div class="paper-journal">${pub.journal || 'Unknown journal'} ${pub.year ? `(${pub.year})` : ''}</div>
                         <div class="paper-abstract">${abstract}</div>
+                        <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
+                            ${pub.doi ? `<button onclick="event.stopPropagation(); window.open('https://doi.org/${pub.doi}', '_blank')" style="background: #51cf66; border: none; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">View Paper</button>` : ''}
+                            ${pub.pubmed_id ? `<button onclick="event.stopPropagation(); window.open('https://pubmed.ncbi.nlm.nih.gov/${pub.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">PubMed</button>` : ''}
+                        </div>
                     </div>
                 `;
             });
@@ -1553,6 +1867,202 @@
         
         function closePaperViewer() {
             $('#paper-viewer').fadeOut(200);
+        }
+
+        // raw pdb functions
+        function clearRawPdb() {
+            $('#rawpdb-title').text('Raw PDB Data');
+            $('#rawpdb-info').text('Load a structure to view formatted PDB data');
+            $('#rawpdb-content').html('<div class="no-rawpdb"><div>No structure loaded</div><div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view formatted data</div></div>');
+            rawPdbData = null;
+        }
+
+        function displayRawPdb(pdbData, pdbId = null) {
+            rawPdbData = pdbData;
+            const title = pdbId ? `Raw PDB Data - ${pdbId}` : 'Raw PDB Data - Uploaded File';
+            $('#rawpdb-title').text(title);
+            
+            const lines = pdbData.split('\n').filter(line => line.trim());
+            $('#rawpdb-info').text(`${lines.length} lines of PDB data`);
+            
+            // initialize fast grid for performance
+            initializeFastPdbGrid(lines);
+        }
+
+        function getRecordClass(recordType) {
+            switch(recordType) {
+                case 'HEADER':
+                case 'TITLE':
+                case 'COMPND':
+                case 'SOURCE':
+                case 'KEYWDS':
+                case 'EXPDTA':
+                case 'AUTHOR':
+                case 'REVDAT':
+                case 'JRNL':
+                case 'REMARK':
+                    return 'record-header';
+                case 'ATOM':
+                    return 'record-atom';
+                case 'HETATM':
+                    return 'record-hetatm';
+                case 'CONECT':
+                    return 'record-conect';
+                default:
+                    return '';
+            }
+        }
+
+        // fast grid implementation inspired by gabrielpetersson/fast-grid
+        function initializeFastPdbGrid(lines) {
+            const startTime = performance.now();
+            
+            // parse data
+            fastGrid.data = lines.map((line, index) => ({
+                lineNumber: index + 1,
+                recordType: line.substring(0, 6).trim(),
+                content: line.substring(6),
+                originalLine: line
+            }));
+            
+            fastGrid.filteredData = [...fastGrid.data];
+            
+            // get unique record types for filters
+            const recordTypes = [...new Set(fastGrid.data.map(row => row.recordType))].filter(Boolean);
+            
+            // create grid html structure
+            const gridHtml = `
+                <div class="fast-grid-container">
+                    <div class="pdb-filters">
+                        <span style="font-size: 11px; color: #888;">Filter by record type:</span>
+                        <select class="pdb-filter-dropdown" id="pdb-filter-select" onchange="fastGridFilter(this.value)">
+                            <option value="all">All Records</option>
+                            ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="fast-grid-stats">
+                        <span>Showing <span id="grid-visible-count">${fastGrid.filteredData.length}</span> of ${fastGrid.data.length} records</span>
+                        <span class="fast-grid-performance" id="grid-performance">120 FPS</span>
+                    </div>
+                    <div class="fast-grid-header">
+                        <div class="fast-grid-header-cell">Line</div>
+                        <div class="fast-grid-header-cell">Record</div>
+                        <div class="fast-grid-header-cell">Content</div>
+                    </div>
+                    <div class="fast-grid-viewport" id="fast-grid-viewport">
+                        <div class="fast-grid-content" id="fast-grid-content"></div>
+                    </div>
+                </div>
+            `;
+            
+            $('#rawpdb-content').html(gridHtml);
+            
+            // initialize grid components
+            fastGrid.container = document.getElementById('fast-grid-content');
+            fastGrid.viewport = document.getElementById('fast-grid-viewport');
+            
+            // setup scroll listener with throttling for performance
+            let scrollTimeout;
+            fastGrid.viewport.addEventListener('scroll', () => {
+                if (scrollTimeout) clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateFastGridView, 0);
+            });
+            
+            // initial render
+            updateFastGridDimensions();
+            updateFastGridView();
+            
+            const loadTime = (performance.now() - startTime).toFixed(1);
+            $('#grid-performance').text(`Loaded in ${loadTime}ms`);
+        }
+
+        function updateFastGridDimensions() {
+            fastGrid.containerHeight = fastGrid.viewport.clientHeight;
+            fastGrid.visibleRowCount = Math.ceil(fastGrid.containerHeight / fastGrid.rowHeight) + fastGrid.buffer;
+        }
+
+        function updateFastGridView() {
+            const scrollTop = fastGrid.viewport.scrollTop;
+            const totalHeight = fastGrid.filteredData.length * fastGrid.rowHeight;
+            
+            // calculate visible range
+            fastGrid.startIndex = Math.floor(scrollTop / fastGrid.rowHeight);
+            fastGrid.endIndex = Math.min(
+                fastGrid.startIndex + fastGrid.visibleRowCount,
+                fastGrid.filteredData.length
+            );
+            
+            // set container height to create proper scrollbar
+            fastGrid.container.style.height = `${totalHeight}px`;
+            
+            // clear existing rows
+            fastGrid.container.innerHTML = '';
+            
+            // render visible rows only
+            for (let i = fastGrid.startIndex; i < fastGrid.endIndex; i++) {
+                const row = fastGrid.filteredData[i];
+                if (!row) continue;
+                
+                const rowElement = createFastGridRow(row, i);
+                fastGrid.container.appendChild(rowElement);
+            }
+            
+            // update performance indicator
+            const fps = Math.min(120, 1000 / (performance.now() - (fastGrid.lastRender || performance.now())));
+            $('#grid-performance').text(`${Math.round(fps)} FPS`);
+            fastGrid.lastRender = performance.now();
+        }
+
+        function createFastGridRow(rowData, index) {
+            const row = document.createElement('div');
+            row.className = 'fast-grid-row';
+            row.style.top = `${index * fastGrid.rowHeight}px`;
+            
+            const recordClass = getRecordClass(rowData.recordType);
+            
+            row.innerHTML = `
+                <div class="fast-grid-cell">${rowData.lineNumber}</div>
+                <div class="fast-grid-cell record-type ${recordClass}">${rowData.recordType}</div>
+                <div class="fast-grid-cell">${rowData.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            `;
+            
+            return row;
+        }
+
+        function fastGridFilter(recordType) {
+            const startTime = performance.now();
+            
+            // update dropdown selection
+            const dropdown = document.getElementById('pdb-filter-select');
+            if (dropdown && dropdown.value !== recordType) {
+                dropdown.value = recordType;
+            }
+            
+            // filter data
+            if (recordType === 'all') {
+                fastGrid.filteredData = [...fastGrid.data];
+            } else {
+                fastGrid.filteredData = fastGrid.data.filter(row => row.recordType === recordType);
+            }
+            
+            fastGrid.currentFilter = recordType;
+            
+            // reset scroll position
+            fastGrid.viewport.scrollTop = 0;
+            
+            // update view
+            updateFastGridView();
+            
+            // update stats
+            $('#grid-visible-count').text(fastGrid.filteredData.length);
+            
+            const filterTime = (performance.now() - startTime).toFixed(1);
+            $('#grid-performance').text(`Filtered in ${filterTime}ms`);
+        }
+
+        function filterPdbRecords(recordType) {
+            // legacy function - redirect to fast grid
+            fastGridFilter(recordType);
         }
     </script>
 </body>
