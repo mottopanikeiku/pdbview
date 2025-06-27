@@ -741,6 +741,12 @@
             overflow: auto;
             position: relative;
             background: #0f0f0f;
+            /* Better text rendering during transforms */
+            will-change: transform;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            backface-visibility: hidden;
         }
 
         .fast-grid-content {
@@ -1022,9 +1028,14 @@
             min-height: 300px;
             max-height: calc(100vh - 300px);
             /* Force hardware acceleration */
-            will-change: scroll-position;
+            will-change: scroll-position, transform;
             transform: translateZ(0);
             -webkit-overflow-scrolling: touch;
+            /* Better text rendering during transforms */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            backface-visibility: hidden;
         }
 
         .atom-table-content {
@@ -3179,6 +3190,11 @@
                 return true;
             });
             
+            console.log(`Filtered atoms: ${atomTable.filteredData.length} of ${atomTable.data.length}`);
+            
+            // Update stats immediately - before view update
+            updateAtomStats();
+            
             // Reset scroll position
             if (atomTable.viewport) {
                 atomTable.viewport.scrollTop = 0;
@@ -3186,23 +3202,31 @@
             
             // Update view
             updateAtomTableView();
-            updateAtomStats();
         }
         
         function updateAtomStats() {
             const statsElement = document.getElementById('atom-stats');
-            if (!statsElement) return;
+            if (!statsElement) {
+                console.warn('Stats element not found');
+                return;
+            }
             
             const totalAtoms = atomTable.data.length;
             const filteredAtoms = atomTable.filteredData.length;
-            const atomCount = atomTable.data.filter(a => a.recordType === 'ATOM').length;
-            const hetatmCount = atomTable.data.filter(a => a.recordType === 'HETATM').length;
             
+            // Count filtered records by type for more accurate stats
+            const filteredAtomCount = atomTable.filteredData.filter(a => a.recordType === 'ATOM').length;
+            const filteredHetatmCount = atomTable.filteredData.filter(a => a.recordType === 'HETATM').length;
+            
+            let statsText;
             if (filteredAtoms !== totalAtoms) {
-                statsElement.textContent = `Showing ${filteredAtoms.toLocaleString()} of ${totalAtoms.toLocaleString()} atoms`;
+                statsText = `Showing ${filteredAtoms.toLocaleString()} of ${totalAtoms.toLocaleString()} atoms (${filteredAtomCount.toLocaleString()} ATOM, ${filteredHetatmCount.toLocaleString()} HETATM)`;
             } else {
-                statsElement.textContent = `${totalAtoms.toLocaleString()} atoms (${atomCount.toLocaleString()} ATOM, ${hetatmCount.toLocaleString()} HETATM)`;
+                statsText = `${totalAtoms.toLocaleString()} atoms (${filteredAtomCount.toLocaleString()} ATOM, ${filteredHetatmCount.toLocaleString()} HETATM)`;
             }
+            
+            statsElement.textContent = statsText;
+            console.log('Stats updated:', statsText);
         }
         
         // Debug function to check atom table state
@@ -3246,12 +3270,20 @@
             if (container) {
                 container.style.transform = `scale(${atomZoomLevel / 100})`;
                 container.style.transformOrigin = 'top left';
+                // Force repaint to fix blurry text
+                container.style.display = 'none';
+                container.offsetHeight; // Trigger reflow
+                container.style.display = '';
                 console.log(`Atom table zoom: ${atomZoomLevel}%`);
             }
             
             if (header) {
                 header.style.transform = `scale(${atomZoomLevel / 100})`;
                 header.style.transformOrigin = 'top left';
+                // Force repaint for header too
+                header.style.display = 'none';
+                header.offsetHeight; // Trigger reflow
+                header.style.display = '';
             }
             
             if (levelDisplay) {
@@ -3273,12 +3305,20 @@
             if (container) {
                 container.style.transform = `scale(${pdbZoomLevel / 100})`;
                 container.style.transformOrigin = 'top left';
+                // Force repaint to fix blurry text
+                container.style.display = 'none';
+                container.offsetHeight; // Trigger reflow
+                container.style.display = '';
                 console.log(`PDB table zoom: ${pdbZoomLevel}%`);
             }
             
             if (header) {
                 header.style.transform = `scale(${pdbZoomLevel / 100})`;
                 header.style.transformOrigin = 'top left';
+                // Force repaint for header too
+                header.style.display = 'none';
+                header.offsetHeight; // Trigger reflow
+                header.style.display = '';
             }
             
             if (levelDisplay) {
