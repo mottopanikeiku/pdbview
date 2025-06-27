@@ -1279,7 +1279,7 @@
                 <div class="control-group">
                     <label for="style-select">Style</label>
                     <select id="style-select" onchange="updateStyle()">
-                        <option value="cartoon">Cartoon</option>
+                        <option value="cartoon">Ribbon</option>
                         <option value="stick">Stick</option>
                         <option value="sphere">Sphere</option>
                         <option value="line">Line</option>
@@ -1291,9 +1291,9 @@
                     <label for="color-select">Color Scheme</label>
                     <select id="color-select" onchange="updateStyle()">
                         <option value="spectrum">Spectrum</option>
-                        <option value="chainHetatm">Chain</option>
+                        <option value="chain">Chain</option>
                         <option value="residue">Residue</option>
-                        <option value="atom">Atom Type</option>
+                        <option value="element">Element</option>
                         <option value="white">White</option>
                         <option value="red">Red</option>
                         <option value="blue">Blue</option>
@@ -1940,9 +1940,22 @@
             // Clear existing styles
             viewer.setStyle({}, {});
             
-            // Define style object
+            // Define style object with proper color handling
             const styleObj = {};
-            styleObj[styleType] = { color: colorScheme };
+            
+            // Handle different color schemes properly for 3DMol.js
+            if (colorScheme === 'spectrum') {
+                styleObj[styleType] = { colorscheme: 'spectrum' };
+            } else if (colorScheme === 'chain') {
+                styleObj[styleType] = { colorscheme: 'chain' };
+            } else if (colorScheme === 'residue') {
+                styleObj[styleType] = { colorscheme: 'residue' };
+            } else if (colorScheme === 'element') {
+                styleObj[styleType] = { colorscheme: 'element' };
+            } else {
+                // For solid colors (white, red, blue, green)
+                styleObj[styleType] = { color: colorScheme };
+            }
             
             // Apply the style
             viewer.setStyle({}, styleObj);
