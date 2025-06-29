@@ -287,6 +287,64 @@
             border-color: #51cf66 !important;
         }
         
+        .warning {
+            color: #ffd93d !important;
+            border-color: #ffd93d !important;
+        }
+        
+        .pdb-error-display {
+            display: none;
+            background: #2a1a1a;
+            border: 1px solid #ff6b6b;
+            border-radius: 4px;
+            padding: 8px 10px;
+            margin-top: 6px;
+            font-size: 11px;
+            color: #ff6b6b;
+            animation: errorSlideIn 0.3s ease-out;
+        }
+        
+        .pdb-error-display.show {
+            display: block;
+        }
+        
+        .pdb-validation-indicator {
+            display: none;
+            font-size: 10px;
+            color: #888;
+            margin-top: 4px;
+            font-style: italic;
+        }
+        
+        .pdb-validation-indicator.show {
+            display: block;
+        }
+        
+        .pdb-validation-indicator.checking::before {
+            content: "🔍 ";
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .pdb-validation-indicator.valid::before {
+            content: "✅ ";
+        }
+        
+        @keyframes errorSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
         .quick-load {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1256,6 +1314,8 @@
                     <label for="pdb-id">PDB ID</label>
                     <input type="text" id="pdb-id" placeholder="e.g., 1BNA" value="1BNA">
                     <button onclick="loadPDBFromId()">Load from Database</button>
+                    <div id="pdb-validation-indicator" class="pdb-validation-indicator"></div>
+                    <div id="pdb-error-display" class="pdb-error-display"></div>
                 </div>
                 
                 <div class="control-group">
@@ -1506,6 +1566,34 @@
         // Enhanced cache instances
         const literatureCache = new CacheManager(600000); // 10 minutes
         const pdbCache = new CacheManager(1800000); // 30 minutes
+        const pdbExistenceCache = new CacheManager(3600000); // 1 hour for existence checks
+        
+        // Performance monitoring
+        class PerformanceMonitor {
+            static frameCount = 0;
+            static lastFPSUpdate = performance.now();
+            static currentFPS = 0;
+            
+            static trackRender() {
+                this.frameCount++;
+                const now = performance.now();
+                
+                if (now - this.lastFPSUpdate >= 1000) {
+                    this.currentFPS = Math.round((this.frameCount * 1000) / (now - this.lastFPSUpdate));
+                    this.frameCount = 0;
+                    this.lastFPSUpdate = now;
+                    
+                    // Warn if FPS drops too low
+                    if (this.currentFPS < 20) {
+                        console.warn(`Low FPS detected: ${this.currentFPS}`);
+                    }
+                }
+            }
+            
+            static getFPS() {
+                return this.currentFPS;
+            }
+        }
         
         // Virtual scroll manager
         let virtualScrollManager = null;
@@ -1603,7 +1691,7 @@
             
             // Set up periodic cleanup
             setInterval(() => {
-                if (literatureCache.size() > 20 || pdbCache.size() > 10) {
+                if (literatureCache.size() > 20 || pdbCache.size() > 10 || pdbExistenceCache.size() > 100) {
                     MemoryManager.cleanupResources();
                 }
             }, 300000); // Every 5 minutes
@@ -1645,13 +1733,29 @@
             });
         }
         
-        // Throttled rendering for performance
-        let renderTimeout;
+        // Optimized rendering for performance
+        let renderAnimationFrame;
+        let isRenderScheduled = false;
+        
         function throttledRender() {
-            if (renderTimeout) clearTimeout(renderTimeout);
-            renderTimeout = setTimeout(() => {
-                if (viewer) viewer.render();
-            }, 16); // ~60fps
+            if (isRenderScheduled) return;
+            
+            isRenderScheduled = true;
+            renderAnimationFrame = requestAnimationFrame(() => {
+                if (viewer) {
+                    viewer.render();
+                    PerformanceMonitor.trackRender();
+                }
+                isRenderScheduled = false;
+            });
+        }
+        
+        // Cancel pending renders when switching contexts
+        function cancelPendingRender() {
+            if (renderAnimationFrame) {
+                cancelAnimationFrame(renderAnimationFrame);
+                isRenderScheduled = false;
+            }
         }
         
         function initializeViewer() {
@@ -1664,63 +1768,139 @@
             viewer = $3Dmol.createViewer($(element), {
                 defaultcolors: $3Dmol.elementColors.rasmol,
                 backgroundColor: 'black',
-                // Performance optimizations
+                // Enhanced performance optimizations
                 antialias: false,
                 preserveDrawingBuffer: false,
-                powerPreference: "high-performance"
+                powerPreference: "high-performance",
+                alpha: false,
+                depth: true,
+                stencil: false,
+                premultipliedAlpha: false,
+                failIfMajorPerformanceCaveat: false
             });
             
-            // ensure viewer is properly sized
-            setTimeout(() => {
+            // Set up optimized controls
+            viewer.setViewStyle({style: "outline", color: "black", width: 0.1});
+            
+            // Use single RAF call for initial setup
+            requestAnimationFrame(() => {
                 if (viewer) {
                     viewer.resize();
-                    throttledRender();
+                    viewer.render();
                 }
-            }, 100);
+            });
         }
         
         function showMessage(message, type = 'info') {
             const statusDisplay = document.getElementById('status-display');
             if (!statusDisplay) return;
             
-            statusDisplay.classList.remove('error', 'success');
+            statusDisplay.classList.remove('error', 'success', 'warning');
             
             if (type === 'error') {
                 statusDisplay.classList.add('error');
             } else if (type === 'success') {
                 statusDisplay.classList.add('success');
+            } else if (type === 'warning') {
+                statusDisplay.classList.add('warning');
             }
             
             statusDisplay.textContent = message;
         }
         
-        // Memory management utilities
+        // Local PDB error display functions
+        function showPdbError(message) {
+            const errorDisplay = document.getElementById('pdb-error-display');
+            if (!errorDisplay) return;
+            
+            errorDisplay.textContent = message;
+            errorDisplay.classList.add('show');
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => hidePdbError(), 8000);
+        }
+        
+        function hidePdbError() {
+            const errorDisplay = document.getElementById('pdb-error-display');
+            if (!errorDisplay) return;
+            
+            errorDisplay.classList.remove('show');
+        }
+        
+        function clearPdbError() {
+            hidePdbError();
+        }
+        
+        // PDB validation indicator functions
+        function showPdbValidationIndicator(message, type = 'checking') {
+            const indicator = document.getElementById('pdb-validation-indicator');
+            if (!indicator) return;
+            
+            indicator.textContent = message;
+            indicator.className = `pdb-validation-indicator show ${type}`;
+        }
+        
+        function hidePdbValidationIndicator() {
+            const indicator = document.getElementById('pdb-validation-indicator');
+            if (!indicator) return;
+            
+            indicator.classList.remove('show', 'checking', 'valid');
+        }
+        
+        // Enhanced memory management utilities
         class MemoryManager {
             static cleanupResources() {
+                // Cancel any pending renders first
+                cancelPendingRender();
+                
                 if (currentModel) {
                     viewer.removeAllModels();
+                    viewer.removeAllShapes();
                     currentModel = null;
                 }
                 
                 // Clear large data structures
                 if (fastGrid.data) {
-                    fastGrid.data = [];
-                    fastGrid.filteredData = [];
+                    fastGrid.data.length = 0; // More efficient than reassignment
+                    fastGrid.filteredData.length = 0;
                 }
-                rawPdbData = null;
                 
-                // Clear caches if they get too large
-                if (literatureCache.size() > 10) {
+                if (atomTable.data) {
+                    atomTable.data.length = 0;
+                    atomTable.filteredData.length = 0;
+                }
+                
+                rawPdbData = null;
+                selectedAtoms.length = 0;
+                
+                // Clear caches more aggressively
+                if (literatureCache.size() > 8) {
                     literatureCache.clear();
                 }
-                if (pdbCache.size() > 5) {
+                if (pdbCache.size() > 3) {
                     pdbCache.clear();
                 }
+                if (pdbExistenceCache.size() > 50) { // Keep more existence checks cached
+                    pdbExistenceCache.clear();
+                }
+                
+                // Clear DOM references that might hold memory
+                this.clearDOMReferences();
                 
                 // Force garbage collection hint
                 if (window.gc) {
                     window.gc();
                 }
+            }
+            
+            static clearDOMReferences() {
+                // Clear any cached DOM elements that might hold references
+                const containers = [fastGrid.container, atomTable.container];
+                containers.forEach(container => {
+                    if (container) {
+                        container.innerHTML = '';
+                    }
+                });
             }
             
             static optimizeImageLoading() {
@@ -1770,6 +1950,8 @@
         function quickLoad(pdbId) {
             const pdbInput = document.getElementById('pdb-id');
             if (pdbInput) {
+                clearPdbError(); // Clear any previous errors
+                hidePdbValidationIndicator(); // Clear validation indicator
                 pdbInput.value = pdbId;
                 loadPDBFromId();
             }
@@ -1784,8 +1966,18 @@
             
             const pdbId = pdbInput.value.trim().toUpperCase();
             
+            // Clear any previous PDB errors and indicators
+            clearPdbError();
+            hidePdbValidationIndicator();
+            
             if (!pdbId) {
-                showMessage('Please enter a PDB ID', 'error');
+                showPdbError('Please enter a PDB ID');
+                return;
+            }
+            
+            // Validate PDB ID format (4 characters, alphanumeric)
+            if (!/^[A-Z0-9]{4}$/.test(pdbId)) {
+                showPdbError('PDB ID must be exactly 4 characters (letters and numbers only)');
                 return;
             }
             
@@ -1796,20 +1988,33 @@
                 return;
             }
             
-            showMessage(`Loading ${pdbId}...`);
-            
-            // Clear previous model
-            viewer.removeAllModels();
+            showMessage(`Checking ${pdbId}...`);
             
             try {
-                // Fetch PDB data using modern fetch API
+                // Quick existence check using RCSB REST API (much faster than downloading full file)
+                const existsCheck = await checkPDBExists(pdbId);
+                if (!existsCheck.exists) {
+                    throw new Error(existsCheck.error);
+                }
+                
+                showMessage(`Loading ${pdbId}...`);
+                
+                // Clear previous model
+                viewer.removeAllModels();
+                
+                // Now fetch the actual PDB data
                 const response = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(`Failed to download PDB file for "${pdbId}"`);
                 }
                 
                 const data = await response.text();
+                
+                // Validate that we got actual PDB data
+                if (!data.includes('HEADER') && !data.includes('ATOM') && !data.includes('HETATM')) {
+                    throw new Error(`Invalid PDB data received for "${pdbId}"`);
+                }
                 
                 // Cache the data
                 pdbCache.set(pdbId, data);
@@ -1818,43 +2023,165 @@
                 
             } catch (error) {
                 console.error('PDB loading error:', error);
-                showMessage(`Failed to load ${pdbId}. Please check the ID and try again.`, 'error');
+                showPdbError(error.message);
+                showMessage(`Failed to load ${pdbId}`, 'error');
             }
         }
         
+        // Fast PDB existence check using RCSB REST API with caching
+        async function checkPDBExists(pdbId) {
+            // Check cache first
+            const cachedResult = pdbExistenceCache.get(pdbId);
+            if (cachedResult) {
+                return cachedResult;
+            }
+            
+            try {
+                // Use RCSB's REST API to quickly check if PDB exists
+                // This endpoint returns basic info (much smaller than full PDB file)
+                const response = await fetch(`https://data.rcsb.org/rest/v1/core/entry/${pdbId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                let result;
+                
+                if (response.status === 404) {
+                    result = {
+                        exists: false,
+                        error: `PDB "${pdbId}" doesn't exist in the database`
+                    };
+                } else if (response.status === 400) {
+                    result = {
+                        exists: false,
+                        error: `Invalid PDB ID format: "${pdbId}"`
+                    };
+                } else if (response.status >= 500) {
+                    result = {
+                        exists: false,
+                        error: `Server error checking "${pdbId}". Try again later`
+                    };
+                } else if (!response.ok) {
+                    result = {
+                        exists: false,
+                        error: `Error checking PDB "${pdbId}" (HTTP ${response.status})`
+                    };
+                } else {
+                    // PDB exists, optionally parse some basic info
+                    const data = await response.json();
+                    result = {
+                        exists: true,
+                        info: {
+                            title: data.struct?.title,
+                            release_date: data.rcsb_accession_info?.initial_release_date
+                        }
+                    };
+                }
+                
+                // Cache the result
+                pdbExistenceCache.set(pdbId, result);
+                return result;
+                
+            } catch (error) {
+                // Network error or other issue
+                console.warn('PDB existence check failed:', error);
+                const result = {
+                    exists: false,
+                    error: `Unable to verify PDB "${pdbId}". Check your connection and try again`
+                };
+                
+                // Don't cache network errors (so we can retry)
+                return result;
+            }
+        }
+        
+        // Debounced real-time PDB validation
+        const debouncedPDBValidation = PerformanceManager.debounce(async (pdbId) => {
+            if (!pdbId || pdbId.length !== 4 || !/^[A-Z0-9]{4}$/.test(pdbId)) {
+                hidePdbValidationIndicator();
+                return; // Don't validate incomplete or invalid format
+            }
+            
+            try {
+                // Show checking indicator
+                showPdbValidationIndicator('Checking PDB...', 'checking');
+                
+                const result = await checkPDBExists(pdbId);
+                
+                // Only update UI if the input still matches what we checked
+                const currentInput = document.getElementById('pdb-id')?.value?.trim()?.toUpperCase();
+                if (currentInput === pdbId) {
+                    if (result.exists) {
+                        showPdbValidationIndicator('PDB exists', 'valid');
+                        // Auto-hide success indicator after 3 seconds
+                        setTimeout(() => hidePdbValidationIndicator(), 3000);
+                    } else {
+                        hidePdbValidationIndicator();
+                        showPdbError(result.error);
+                    }
+                } else {
+                    // Input changed while we were checking, hide indicator
+                    hidePdbValidationIndicator();
+                }
+            } catch (error) {
+                hidePdbValidationIndicator();
+                // Silently fail for real-time validation
+                console.warn('Real-time validation failed:', error);
+            }
+        }, 800); // Wait 800ms after user stops typing
+        
         function loadPDBData(data, pdbId) {
             try {
+                // Cancel any pending renders
+                cancelPendingRender();
+                
                 // Clear previous model and literature
                 viewer.removeAllModels();
+                viewer.removeAllShapes();
                 clearLiterature();
                 clearRawPdb();
                 
                 // Clear atom data to prevent duplication
-                atomTable.data = [];
-                atomTable.filteredData = [];
+                atomTable.data.length = 0;
+                atomTable.filteredData.length = 0;
                 
                 // Add the molecular data to the viewer
                 currentModel = viewer.addModel(data, 'pdb');
                 
-                // Apply initial styling
-                updateStyle();
+                // Check model size for performance warnings
+                const atomCount = currentModel.selectedAtoms({}).length;
+                if (atomCount > 50000) {
+                    showMessage(`Large molecule detected (${atomCount.toLocaleString()} atoms). Performance may be affected.`, 'warning');
+                }
                 
-                // Center and render
-                viewer.zoomTo();
-                throttledRender();
+                // Apply initial styling (batched)
+                requestAnimationFrame(() => {
+                    updateStyle();
+                    
+                    // Center and render once
+                    viewer.zoomTo();
+                    
+                    // Store current pdb id and update stats
+                    currentPdbId = pdbId;
+                    updateMolecularStats(currentModel);
+                    
+                    // Parse data asynchronously to avoid blocking
+                    setTimeout(() => {
+                        fetchLiterature(pdbId);
+                        displayRawPdb(data, pdbId);
+                        parseAtomData(data);
+                    }, 0);
+                    
+                    showMessage(`${pdbId} loaded successfully`, 'success');
+                    // Clear any previous PDB errors on successful load
+                    clearPdbError();
+                });
                 
-                // Store current pdb id and fetch literature
-                currentPdbId = pdbId;
-                updateMolecularStats(currentModel);
-                fetchLiterature(pdbId);
-                displayRawPdb(data, pdbId);
-                
-                // Parse atom data for atom table
-                parseAtomData(data);
-                
-                showMessage(`${pdbId} loaded successfully`, 'success');
             } catch (error) {
                 console.error('PDB parsing error:', error);
+                showPdbError(`Error parsing PDB data: ${error.message}`);
                 showMessage(`Error parsing PDB data: ${error.message}`, 'error');
             }
         }
@@ -1867,9 +2194,19 @@
             
             const file = fileInput.files[0];
             
+            // Clear any previous PDB errors and indicators
+            clearPdbError();
+            hidePdbValidationIndicator();
+            
+            // Validate file extension
+            if (!file.name.toLowerCase().endsWith('.pdb')) {
+                showPdbError('Please select a PDB file (.pdb extension)');
+                return;
+            }
+            
             // Validate file size (limit to 50MB for performance)
             if (file.size > 50 * 1024 * 1024) {
-                showMessage('File too large. Please select a file smaller than 50MB.', 'error');
+                showPdbError('File too large. Please select a file smaller than 50MB');
                 return;
             }
             
@@ -1880,6 +2217,16 @@
             reader.onload = function(e) {
                 try {
                     const data = e.target.result;
+                    
+                    // Validate file content
+                    if (!data || data.trim().length === 0) {
+                        throw new Error('File appears to be empty');
+                    }
+                    
+                    // Check if it looks like a PDB file
+                    if (!data.includes('ATOM') && !data.includes('HETATM') && !data.includes('HEADER')) {
+                        throw new Error('File doesn\'t appear to be a valid PDB format');
+                    }
                     
                     // Clear previous model
                     viewer.removeAllModels();
@@ -1911,18 +2258,20 @@
                     showMessage(`${file.name} loaded successfully`, 'success');
                 } catch (error) {
                     console.error('File parsing error:', error);
+                    showPdbError(`Error parsing file: ${error.message}`);
                     showMessage(`Error parsing file: ${error.message}`, 'error');
                 }
             };
             
             reader.onerror = function() {
+                showPdbError('Error reading file. Please try again');
                 showMessage('Error reading file', 'error');
             };
             
             reader.readAsText(file);
         }
         
-        const throttledUpdateStyle = PerformanceManager.throttle(updateStyle, 100);
+        const throttledUpdateStyle = PerformanceManager.throttle(updateStyle, 150);
         
         function updateStyle() {
             if (!currentModel) {
@@ -1937,7 +2286,11 @@
             const styleType = styleSelect.value;
             const colorScheme = colorSelect.value;
             
-            // Clear existing styles
+            // Batch style updates for better performance
+            cancelPendingRender(); // Cancel any pending renders
+            
+            // Clear existing styles efficiently
+            viewer.removeAllShapes();
             viewer.setStyle({}, {});
             
             // Define style object with proper color handling
@@ -1957,14 +2310,19 @@
                 styleObj[styleType] = { color: colorScheme };
             }
             
-            // Apply the style
+            // Apply the style in a single batch
             viewer.setStyle({}, styleObj);
             
-            // Re-enable click handling if interactive mode is on
+            // Re-enable click handling if interactive mode is on (without render)
             if (interactiveMode) {
-                enableClickHandling();
+                viewer.setClickable({}, true, function(atom, viewer, event, container) {
+                    if (interactiveMode) {
+                        handleAtomClick(atom);
+                    }
+                });
             }
             
+            // Single render call at the end
             throttledRender();
         }
         
@@ -1987,6 +2345,8 @@
                 closeAminoAcidModal();
                 clearLiterature();
                 clearRawPdb();
+                clearPdbError(); // Clear any PDB errors
+                hidePdbValidationIndicator(); // Clear validation indicator
                 showMessage('Display cleared');
                 
                 // Turn off interactive mode
@@ -2051,24 +2411,27 @@
         function enableClickHandling() {
             if (!currentModel) return;
             
-            // Set up click handling for all atoms
+            // Set up click handling for all atoms (no immediate render)
             viewer.setClickable({}, true, function(atom, viewer, event, container) {
                 if (interactiveMode) {
                     handleAtomClick(atom);
                 }
             });
             
+            // Only render if not already scheduled
             throttledRender();
         }
         
         function disableClickHandling() {
             if (!currentModel) return;
             
-            // Clear previous selections
+            // Clear previous selections efficiently
             clearAtomSelection();
             
-            // Remove click handlers
+            // Remove click handlers (no immediate render)
             viewer.setClickable({}, false);
+            
+            // Single render call
             throttledRender();
         }
         
@@ -2405,24 +2768,59 @@
         }
         
         // Initialize file input handler after DOM loads
-        document.addEventListener('DOMContentLoaded', setupFileInputHandler);
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileInputHandler();
+            setupPdbInputHandler();
+        });
+        
+        // Setup PDB input handler with real-time validation
+        function setupPdbInputHandler() {
+            const pdbInput = document.getElementById('pdb-id');
+            if (pdbInput) {
+                pdbInput.addEventListener('input', function() {
+                    const value = this.value.trim().toUpperCase();
+                    
+                    // Clear errors and validation indicators as user types
+                    clearPdbError();
+                    hidePdbValidationIndicator();
+                    
+                    // Update input to uppercase for consistency
+                    if (this.value !== value) {
+                        this.value = value;
+                    }
+                    
+                    // Trigger real-time validation if input looks complete
+                    if (value.length === 4) {
+                        debouncedPDBValidation(value);
+                    }
+                });
+                
+                // Also validate on blur (when user leaves the field)
+                pdbInput.addEventListener('blur', function() {
+                    const value = this.value.trim().toUpperCase();
+                    if (value.length === 4 && /^[A-Z0-9]{4}$/.test(value)) {
+                        debouncedPDBValidation(value);
+                    }
+                });
+            }
+        }
         
         // tab switching functions
         function switchTab(tabName) {
-            // update tab buttons
-            $('.tab-button').removeClass('active');
-            $(`button[onclick="switchTab('${tabName}')"]`).addClass('active');
+            // update tab buttons efficiently
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`button[onclick="switchTab('${tabName}')"]`)?.classList.add('active');
             
-            // update tab panels
-            $('.tab-panel').removeClass('active');
-            $(`#${tabName}-panel`).addClass('active');
+            // update tab panels efficiently
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(`${tabName}-panel`)?.classList.add('active');
             
-            // if switching to 3d view, resize viewer
+            // if switching to 3d view, resize viewer efficiently
             if (tabName === '3d-view' && viewer) {
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     viewer.resize();
-                    viewer.render();
-                }, 100);
+                    throttledRender();
+                });
             }
             
             // if switching to raw pdb, update grid dimensions

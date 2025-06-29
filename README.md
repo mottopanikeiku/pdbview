@@ -102,12 +102,3 @@ the codebase is designed to be easily extensible:
 
 this project is licensed under the mit license - see the [license](license) file for details.
 
-## acknowledgments
-
-- **3dmol.js** team for the excellent molecular visualization library
-- **rcsb protein data bank** for providing free access to structural data
-- **webgl** for enabling high-performance 3d graphics in browsers
-
----
-
-*built for researchers, educators, and anyone interested in exploring molecular structures.*
