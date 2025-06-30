@@ -1779,8 +1779,8 @@
                             ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
                         </select>
                         <span style="font-size: 11px; color: #888; margin-left: 15px;">Zoom:</span>
-                        <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">ðŸ”âˆ’</button>
-                        <button class="zoom-btn" onclick="zoomPdbTable('in')" title="Zoom In">ðŸ”+</button>
+                        <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">🔍−</button>
+                        <button class="zoom-btn" onclick="zoomPdbTable('in')" title="Zoom In">🔍+</button>
                         <span class="zoom-level" id="pdb-zoom-level">100%</span>
                     </div>
                     <div class="fast-grid-stats">
