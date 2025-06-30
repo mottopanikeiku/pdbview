@@ -774,6 +774,8 @@ button:active {
     display: flex;
     flex-direction: column;
     background: #0f0f0f;
+    position: relative;
+    /* Performance optimizations */
     contain: layout style paint;
 }
 
@@ -781,12 +783,12 @@ button:active {
     display: flex;
     background: #2a2a2a;
     border-bottom: 2px solid #555;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    font-weight: 600;
     position: sticky;
     top: 0;
     z-index: 100;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 500;
 }
 
 .fast-grid-header-cell {
@@ -795,26 +797,19 @@ button:active {
     border-right: 1px solid #555;
     display: flex;
     align-items: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .fast-grid-header-cell:nth-child(1) { width: 60px; min-width: 60px; }
 .fast-grid-header-cell:nth-child(2) { width: 80px; min-width: 80px; }
-.fast-grid-header-cell:nth-child(3) { width: calc(100% - 140px); min-width: 200px; }
+.fast-grid-header-cell:nth-child(3) { flex: 1; }
 
 .fast-grid-viewport {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: auto;
     position: relative;
     background: #0f0f0f;
-    height: 100%;
-    min-height: 300px;
-    max-height: calc(100vh - 200px);
-    will-change: scroll-position, transform;
-    transform: translateZ(0);
-    -webkit-overflow-scrolling: touch;
+    /* Better text rendering during transforms */
+    will-change: transform;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -826,14 +821,14 @@ button:active {
 }
 
 .fast-grid-row {
+    display: flex;
     position: absolute;
     left: 0;
     right: 0;
-    height: 18px;
-    display: flex;
+    height: 24px;
     border-bottom: 1px solid #333;
     font-family: 'Courier New', monospace;
-    font-size: 9px;
+    font-size: 10px;
     transition: background-color 0.1s;
 }
 
@@ -846,7 +841,7 @@ button:active {
 }
 
 .fast-grid-cell {
-    padding: 2px 6px;
+    padding: 4px 6px;
     color: #ddd;
     border-right: 1px solid #333;
     display: flex;
@@ -858,7 +853,23 @@ button:active {
 
 .fast-grid-cell:nth-child(1) { width: 60px; min-width: 60px; }
 .fast-grid-cell:nth-child(2) { width: 80px; min-width: 80px; }
-.fast-grid-cell:nth-child(3) { width: calc(100% - 140px); min-width: 200px; }
+.fast-grid-cell:nth-child(3) { flex: 1; }
+
+.fast-grid-stats {
+    padding: 8px 15px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    font-size: 10px;
+    color: #888;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fast-grid-performance {
+    font-size: 9px;
+    color: #51cf66;
+}
 
 .line-number {
     color: #666;

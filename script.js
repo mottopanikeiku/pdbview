@@ -231,11 +231,6 @@
             // Core functionality first
             initializeViewer();
             
-            // Load default molecule after a short delay
-            setTimeout(() => {
-                loadPDBFromId();
-            }, 100);
-            
             // Initialize secondary features
             setTimeout(() => {
                 initializeSecondaryFeatures();
@@ -1784,8 +1779,8 @@
                             ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
                         </select>
                         <span style="font-size: 11px; color: #888; margin-left: 15px;">Zoom:</span>
-                        <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">ðŸ”âˆ’</button>
-                        <button class="zoom-btn" onclick="zoomPdbTable('in')" title="Zoom In">ðŸ”+</button>
+                        <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">🔍−</button>
+                        <button class="zoom-btn" onclick="zoomPdbTable('in')" title="Zoom In">🔍+</button>
                         <span class="zoom-level" id="pdb-zoom-level">100%</span>
                     </div>
                     <div class="fast-grid-stats">
@@ -2001,6 +1996,11 @@
             // Clear the "no data" message
             if (atomsContent && atomTable.data.length > 0) {
                 atomsContent.innerHTML = '';
+            }
+            
+            // Initialize the atom table and update stats after parsing
+            if (atomTable.data.length > 0) {
+                initializeAtomTable();
             }
             
             // Reset parsing flag
