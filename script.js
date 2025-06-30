@@ -2003,6 +2003,11 @@
                 atomsContent.innerHTML = '';
             }
             
+            // Initialize the atom table and update stats after parsing
+            if (atomTable.data.length > 0) {
+                initializeAtomTable();
+            }
+            
             // Reset parsing flag
             atomTable.isParsing = false;
         }
