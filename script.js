@@ -231,11 +231,6 @@
             // Core functionality first
             initializeViewer();
             
-            // Load default molecule after a short delay
-            setTimeout(() => {
-                loadPDBFromId();
-            }, 100);
-            
             // Initialize secondary features
             setTimeout(() => {
                 initializeSecondaryFeatures();
