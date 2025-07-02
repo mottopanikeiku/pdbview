@@ -1443,53 +1443,30 @@
             
             let html = '';
             let totalResidues = 0;
-            let globalPosition = 0;
             
             // Create a flat mapping of position to residue data
             window.fastaPositionMap = [];
             
             sequence.forEach((chainData, chainIndex) => {
-                // Add chain header
-                html += `<div class="chain-header">Chain ${chainData.chain}</div>`;
+                if (chainIndex > 0) {
+                    html += '<span class="chain-separator">|</span>';
+                }
                 
-                let chainSequence = '';
                 chainData.residues.forEach((residue, index) => {
                     if (!residue.chain || !residue.resi || !residue.resn) return;
-                    
-                    chainSequence += residue.resn;
                     
                     // Store mapping for position to residue
                     window.fastaPositionMap.push({
                         chain: residue.chain,
                         resi: residue.resi,
                         resn: residue.resn,
-                        globalPos: globalPosition,
+                        globalPos: totalResidues,
                         chainPos: index
                     });
                     
-                    globalPosition++;
+                    html += `<span class="fasta-residue" data-pos="${totalResidues}" id="residue-${totalResidues}">${residue.resn}</span>`;
                     totalResidues++;
                 });
-                
-                // Format sequence in lines of 60 characters with line numbers
-                const lineLength = 60;
-                let currentPos = 0;
-                
-                while (currentPos < chainSequence.length) {
-                    const lineSeq = chainSequence.substring(currentPos, currentPos + lineLength);
-                    const lineNum = currentPos + 1;
-                    
-                    html += `<div class="fasta-line">`;
-                    html += `<span class="fasta-line-number">${lineNum}</span>`;
-                    html += `<span class="fasta-sequence-data" data-start="${globalPosition - totalResidues + currentPos}" data-end="${globalPosition - totalResidues + currentPos + lineSeq.length - 1}">${lineSeq}</span>`;
-                    html += `</div>`;
-                    
-                    currentPos += lineLength;
-                }
-                
-                if (chainIndex < sequence.length - 1) {
-                    html += '<div style="margin: 8px 0;"></div>';
-                }
             });
             
             if (totalResidues === 0) {
@@ -1498,143 +1475,139 @@
             }
             
             fastaSequence.innerHTML = html;
-            fastaInfo.textContent = `${totalResidues} residues across ${sequence.length} chain(s) - Select text to highlight in 3D`;
+            fastaInfo.textContent = `${totalResidues} residues across ${sequence.length} chain(s)`;
             fastaTracker.style.display = 'block';
             
-            // Set up selection event listeners
-            setupFastaSelectionHandlers();
+            // Set up slider functionality
+            setupSliderControls(totalResidues);
         }
         
-        function setupFastaSelectionHandlers() {
+        function setupSliderControls(totalResidues) {
+            const positionSlider = document.getElementById('position-slider');
+            const windowSizeInput = document.getElementById('window-size');
+            const positionDisplay = document.getElementById('position-display');
+            const sliderInfo = document.getElementById('slider-info');
+            
+            if (!positionSlider || !windowSizeInput || !positionDisplay) return;
+            
+            // Configure slider
+            positionSlider.min = 0;
+            positionSlider.max = Math.max(0, totalResidues - 1);
+            positionSlider.value = 0;
+            
+            // Configure window size input
+            windowSizeInput.max = Math.min(50, totalResidues);
+            windowSizeInput.value = Math.min(10, totalResidues);
+            
+            // Update display
+            updatePositionDisplay();
+            if (sliderInfo) {
+                sliderInfo.textContent = `${totalResidues} total residues`;
+            }
+            
+            // Add event listeners
+            positionSlider.addEventListener('input', handleSliderChange);
+            windowSizeInput.addEventListener('input', handleWindowSizeChange);
+            
+            // Initial highlight
+            highlightCurrentWindow();
+        }
+        
+        function handleSliderChange() {
+            updatePositionDisplay();
+            highlightCurrentWindow();
+        }
+        
+        function handleWindowSizeChange() {
+            const windowSizeInput = document.getElementById('window-size');
+            const positionSlider = document.getElementById('position-slider');
+            
+            if (!windowSizeInput || !positionSlider) return;
+            
+            const windowSize = parseInt(windowSizeInput.value);
+            const totalResidues = window.fastaPositionMap ? window.fastaPositionMap.length : 0;
+            
+            // Adjust slider max based on window size
+            positionSlider.max = Math.max(0, totalResidues - windowSize);
+            
+            // Ensure current position is valid
+            if (parseInt(positionSlider.value) > parseInt(positionSlider.max)) {
+                positionSlider.value = positionSlider.max;
+            }
+            
+            updatePositionDisplay();
+            highlightCurrentWindow();
+        }
+        
+        function updatePositionDisplay() {
+            const positionSlider = document.getElementById('position-slider');
+            const windowSizeInput = document.getElementById('window-size');
+            const positionDisplay = document.getElementById('position-display');
+            
+            if (!positionSlider || !windowSizeInput || !positionDisplay) return;
+            
+            const startPos = parseInt(positionSlider.value);
+            const windowSize = parseInt(windowSizeInput.value);
+            const endPos = startPos + windowSize - 1;
+            
+            positionDisplay.textContent = `${startPos + 1}-${endPos + 1}`;
+        }
+        
+        function highlightCurrentWindow() {
+            const positionSlider = document.getElementById('position-slider');
+            const windowSizeInput = document.getElementById('window-size');
+            
+            if (!positionSlider || !windowSizeInput || !window.fastaPositionMap) return;
+            
+            const startPos = parseInt(positionSlider.value);
+            const windowSize = parseInt(windowSizeInput.value);
+            const endPos = Math.min(startPos + windowSize - 1, window.fastaPositionMap.length - 1);
+            
+            // Clear previous highlights
+            clearFastaHighlights();
+            
+            // Get residues in current window
+            const windowResidues = [];
+            for (let i = startPos; i <= endPos; i++) {
+                const residue = window.fastaPositionMap[i];
+                if (residue) {
+                    windowResidues.push(residue);
+                    
+                    // Highlight in FASTA
+                    const residueElement = document.getElementById(`residue-${i}`);
+                    if (residueElement) {
+                        residueElement.classList.add('highlighted');
+                    }
+                }
+            }
+            
+            // Highlight in 3D
+            highlight3DResidueRange(windowResidues);
+            
+            // Auto-scroll FASTA to show highlighted region
+            scrollToHighlightedRegion(startPos, endPos);
+        }
+        
+        function scrollToHighlightedRegion(startPos, endPos) {
             const fastaSequence = document.getElementById('fasta-sequence');
-            if (!fastaSequence) return;
+            const firstHighlighted = document.getElementById(`residue-${startPos}`);
             
-            // Clear any existing listeners
-            fastaSequence.removeEventListener('mouseup', handleFastaSelection);
-            fastaSequence.removeEventListener('keyup', handleFastaSelection);
+            if (!fastaSequence || !firstHighlighted) return;
             
-            // Add selection event listeners
-            fastaSequence.addEventListener('mouseup', handleFastaSelection);
-            fastaSequence.addEventListener('keyup', handleFastaSelection);
+            // Calculate scroll position to center the highlighted region
+            const containerWidth = fastaSequence.clientWidth;
+            const elementLeft = firstHighlighted.offsetLeft;
+            const scrollPos = elementLeft - containerWidth / 2;
             
-            // Also listen for selection changes
-            document.addEventListener('selectionchange', () => {
-                const selection = window.getSelection();
-                if (selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    if (fastaSequence.contains(range.commonAncestorContainer)) {
-                        setTimeout(handleFastaSelection, 10); // Small delay to ensure selection is complete
-                    }
-                }
-            });
-        }
-        
-        function handleFastaSelection() {
-            const selection = window.getSelection();
-            const selectionInfo = document.getElementById('selection-info');
-            const selectionRange = document.getElementById('selection-range');
-            const selectionCount = document.getElementById('selection-count');
-            
-            if (!selection.rangeCount || selection.isCollapsed) {
-                // No selection - clear highlights
-                clearFastaHighlights();
-                clear3DHighlight();
-                if (selectionInfo) selectionInfo.classList.remove('show');
-                return;
-            }
-            
-            const selectedText = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
-            if (selectedText.length === 0) {
-                clearFastaHighlights();
-                clear3DHighlight();
-                if (selectionInfo) selectionInfo.classList.remove('show');
-                return;
-            }
-            
-            // Find the selected residues
-            const selectedResidues = getSelectedResidues(selection);
-            
-            if (selectedResidues.length > 0) {
-                // Update selection info
-                if (selectionInfo && selectionRange && selectionCount) {
-                    const firstResidue = selectedResidues[0];
-                    const lastResidue = selectedResidues[selectedResidues.length - 1];
-                    
-                    selectionRange.textContent = selectedResidues.length === 1 
-                        ? `${firstResidue.resn}${firstResidue.resi} (Chain ${firstResidue.chain})`
-                        : `${firstResidue.resn}${firstResidue.resi} - ${lastResidue.resn}${lastResidue.resi} (Chain ${firstResidue.chain})`;
-                    
-                    selectionCount.textContent = `${selectedResidues.length} residue${selectedResidues.length > 1 ? 's' : ''} selected`;
-                    selectionInfo.classList.add('show');
-                }
-                
-                // Highlight in 3D
-                highlight3DResidueRange(selectedResidues);
-            } else {
-                clearFastaHighlights();
-                clear3DHighlight();
-                if (selectionInfo) selectionInfo.classList.remove('show');
-            }
-        }
-        
-        function getSelectedResidues(selection) {
-            if (!window.fastaPositionMap || !selection.rangeCount) return [];
-            
-            const range = selection.getRangeAt(0);
-            const fastaSequence = document.getElementById('fasta-sequence');
-            
-            if (!fastaSequence.contains(range.commonAncestorContainer)) return [];
-            
-            const selectedResidues = [];
-            const selectedText = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
-            
-            // Find all sequence data elements that intersect with the selection
-            const sequenceElements = fastaSequence.querySelectorAll('.fasta-sequence-data');
-            
-            sequenceElements.forEach(element => {
-                const elementRange = document.createRange();
-                elementRange.selectNodeContents(element);
-                
-                // Check if this element intersects with the selection
-                if (range.intersectsNode(element)) {
-                    const startPos = parseInt(element.dataset.start);
-                    const endPos = parseInt(element.dataset.end);
-                    
-                    // Get the relative positions within this element
-                    const elementText = element.textContent;
-                    let selectionStart = 0;
-                    let selectionEnd = elementText.length - 1;
-                    
-                    // If the selection starts within this element
-                    if (range.startContainer === element.firstChild || element.contains(range.startContainer)) {
-                        selectionStart = range.startOffset;
-                    }
-                    
-                    // If the selection ends within this element
-                    if (range.endContainer === element.firstChild || element.contains(range.endContainer)) {
-                        selectionEnd = range.endOffset - 1;
-                    }
-                    
-                    // Map to residue positions
-                    for (let i = selectionStart; i <= Math.min(selectionEnd, elementText.length - 1); i++) {
-                        const globalPos = startPos + i;
-                        const residue = window.fastaPositionMap[globalPos];
-                        if (residue && !selectedResidues.some(r => r.chain === residue.chain && r.resi === residue.resi)) {
-                            selectedResidues.push(residue);
-                        }
-                    }
-                }
-            });
-            
-            return selectedResidues.sort((a, b) => {
-                if (a.chain !== b.chain) return a.chain.localeCompare(b.chain);
-                return a.resi - b.resi;
+            fastaSequence.scrollTo({
+                left: Math.max(0, scrollPos),
+                behavior: 'smooth'
             });
         }
         
         function clearFastaHighlights() {
             try {
-                document.querySelectorAll('.fasta-sequence-data.highlighted').forEach(el => {
+                document.querySelectorAll('.fasta-residue.highlighted').forEach(el => {
                     el.classList.remove('highlighted');
                 });
             } catch (error) {
@@ -2717,45 +2690,55 @@
             }
         }
 
-        function clearFastaHighlights() {
-            try {
-                document.querySelectorAll('.fasta-sequence-data.highlighted').forEach(el => {
-                    el.classList.remove('highlighted');
-                });
-            } catch (error) {
-                console.warn('Error clearing FASTA highlights:', error);
-            }
-        }
-        
-        function clearFastaSelection() {
-            try {
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                clearFastaHighlights();
-                
-                const selectionInfo = document.getElementById('selection-info');
-                if (selectionInfo) selectionInfo.classList.remove('show');
-                
-                selectedResidue = null;
-            } catch (error) {
-                console.warn('Error clearing FASTA selection:', error);
-            }
-        }
-        
         function highlight3DResidueRange(residues) {
-            if (!currentModel || !residues || residues.length === 0) return;
+            if (!currentModel || !residues || residues.length === 0) {
+                console.log('Cannot highlight: missing model or residues');
+                return;
+            }
             
-            // Clear previous styles
-            currentModel.removeStyle({}, {stick: true, sphere: true});
-            updateStyle();
+            console.log('Highlighting residues:', residues.length);
             
-            // Highlight selected residues
-            residues.forEach(residue => {
+            // Get current style settings
+            const styleSelect = document.getElementById('style-select');
+            const colorSelect = document.getElementById('color-select');
+            
+            if (!styleSelect || !colorSelect) {
+                console.log('Style selectors not found');
+                return;
+            }
+            
+            const styleType = styleSelect.value;
+            const colorScheme = colorSelect.value;
+            
+            // Clear all styles first
+            viewer.setStyle({}, {});
+            
+            // Apply base style to all atoms
+            const baseStyleObj = {};
+            if (colorScheme === 'spectrum') {
+                baseStyleObj[styleType] = { colorscheme: 'spectrum' };
+            } else if (colorScheme === 'chain') {
+                baseStyleObj[styleType] = { colorscheme: 'chain' };
+            } else if (colorScheme === 'residue') {
+                baseStyleObj[styleType] = { colorscheme: 'residue' };
+            } else if (colorScheme === 'element') {
+                baseStyleObj[styleType] = { colorscheme: 'element' };
+            } else {
+                baseStyleObj[styleType] = { color: colorScheme };
+            }
+            
+            viewer.setStyle({}, baseStyleObj);
+            
+            // Apply highlight style to selected residues
+            residues.forEach((residue, index) => {
                 const residueSelector = {
                     chain: residue.chain,
                     resi: residue.resi
                 };
                 
+                console.log(`Highlighting residue ${index + 1}:`, residueSelector);
+                
+                // Add blue highlight on top of base style
                 viewer.addStyle(residueSelector, {
                     stick: {
                         color: '#4a9eff',
@@ -2770,5 +2753,16 @@
                 });
             });
             
+            // Re-enable click handling if interactive mode is on
+            if (interactiveMode) {
+                viewer.setClickable({}, true, function(atom, viewer, event, container) {
+                    if (interactiveMode) {
+                        handleAtomClick(atom);
+                    }
+                });
+            }
+            
             throttledRender();
         }
+
+

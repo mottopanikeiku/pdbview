@@ -38,14 +38,31 @@
                         <div id="fasta-tracker" class="fasta-tracker" style="display: none;">
                             <div class="fasta-header">
                                 <span class="fasta-title">Protein Sequence</span>
-                                <span class="fasta-info" id="fasta-info">Select sequence range to highlight in 3D</span>
+                                <span class="fasta-info" id="fasta-info">Use slider to scan through sequence</span>
                             </div>
                             <div class="fasta-sequence-container">
                                 <div class="fasta-sequence" id="fasta-sequence"></div>
                             </div>
-                            <div class="selection-info" id="selection-info">
-                                <span class="selection-range" id="selection-range"></span>
-                                <span class="selection-count" id="selection-count"></span>
+                            <div class="slider-controls">
+                                <div class="slider-header">
+                                    <span class="slider-title">Sequence Scanner</span>
+                                    <span class="slider-info" id="slider-info">Scan through protein regions</span>
+                                </div>
+                                <div class="slider-container">
+                                    <input type="range" class="position-slider" id="position-slider" 
+                                           min="0" max="100" value="0" step="1">
+                                </div>
+                                <div class="window-controls">
+                                    <div class="window-control-group">
+                                        <span class="control-label">Window Size:</span>
+                                        <input type="number" class="window-size-input" id="window-size" 
+                                               value="10" min="1" max="50">
+                                    </div>
+                                    <div class="window-control-group">
+                                        <span class="control-label">Position:</span>
+                                        <div class="position-display" id="position-display">1-10</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
