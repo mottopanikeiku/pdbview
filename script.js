@@ -157,6 +157,12 @@
         let currentPdbId = null;
         let rawPdbData = null;
         
+        // FASTA and hover functionality
+        let proteinSequence = [];
+        let hoveredResidue = null;
+        let selectedResidue = null;
+        let hoverTimeout = null;
+        
         // Enhanced cache instances
         const literatureCache = new CacheManager(600000); // 10 minutes
         const pdbCache = new CacheManager(1800000); // 30 minutes
@@ -756,6 +762,13 @@
                 currentPdbId = pdbId;
                 updateMolecularStats(currentModel);
                     
+                    // Extract and display protein sequence
+                    proteinSequence = extractProteinSequence(currentModel);
+                    displayFastaSequence(proteinSequence);
+                    
+                    // Set up hover handling
+                    setupHoverHandling();
+                    
                     // Parse data asynchronously to avoid blocking
                     setTimeout(() => {
                 fetchLiterature(pdbId);
@@ -833,6 +846,13 @@
                     // Center and render
                     viewer.zoomTo();
                     throttledRender();
+                    
+                    // Extract and display protein sequence
+                    proteinSequence = extractProteinSequence(currentModel);
+                    displayFastaSequence(proteinSequence);
+                    
+                    // Set up hover handling
+                    setupHoverHandling();
                     
                     // Clear literature for file uploads (no pdb id)
                     currentPdbId = null;
@@ -936,6 +956,19 @@
                 clearRawPdb();
                 clearPdbError(); // Clear any PDB errors
                 hidePdbValidationIndicator(); // Clear validation indicator
+                
+                // Clear FASTA state
+                proteinSequence = [];
+                hoveredResidue = null;
+                selectedResidue = null;
+                clearTimeout(hoverTimeout);
+                
+                // Hide FASTA tracker
+                const fastaTracker = document.getElementById('fasta-tracker');
+                if (fastaTracker) {
+                    fastaTracker.style.display = 'none';
+                }
+                
                 showMessage('Display cleared');
                 
                 // Turn off interactive mode
@@ -1081,9 +1114,9 @@
             const structureElement = document.getElementById('amino-acid-structure');
             if (structureElement) {
                 structureElement.innerHTML = `
-                    <div style="font-size: 14px; color: #ffffff; margin-bottom: 10px;">Chemical Structure</div>
-                    <div style="font-family: monospace; font-size: 24px; color: #00ff88; background: #000; padding: 15px; border-radius: 4px;">
-                        ${residueData.structure}
+                    <div style="font-size: 14px; color: #ffffff; margin-bottom: 10px; font-weight: 500;">Chemical Structure</div>
+                    <div style="font-family: 'Courier New', monospace; font-size: 16px; color: #00ff88; background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); padding: 20px; border-radius: 8px; border: 1px solid #333; text-align: center; line-height: 1.6; word-break: break-all; overflow-wrap: break-word;">
+                        ${residueData.structure || 'Structure not available'}
                     </div>
                 `;
             }
@@ -1340,6 +1373,359 @@
             };
             
             return residueNames[resn] || resn;
+        }
+        
+        // FASTA sequence and hover functionality
+        function extractProteinSequence(model) {
+            if (!model) return [];
+            
+            const sequences = {};
+            const atoms = model.selectedAtoms({});
+            
+            // Group atoms by chain and residue
+            atoms.forEach(atom => {
+                if (!atom.chain || !atom.resn || !atom.resi) return;
+                
+                // Only include standard amino acids
+                const standardAA = ['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE',
+                                  'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER',
+                                  'THR', 'VAL', 'TRP', 'TYR'];
+                
+                if (!standardAA.includes(atom.resn)) return;
+                
+                const chainId = atom.chain;
+                const resId = atom.resi;
+                const resName = atom.resn;
+                
+                if (!sequences[chainId]) {
+                    sequences[chainId] = {};
+                }
+                
+                if (!sequences[chainId][resId]) {
+                    sequences[chainId][resId] = {
+                        resn: resName,
+                        resi: resId,
+                        chain: chainId
+                    };
+                }
+            });
+            
+            // Convert to sorted array
+            const result = [];
+            Object.keys(sequences).sort().forEach(chain => {
+                const residues = Object.keys(sequences[chain])
+                    .map(Number)
+                    .sort((a, b) => a - b)
+                    .map(resId => sequences[chain][resId]);
+                
+                if (residues.length > 0) {
+                    result.push({
+                        chain: chain,
+                        residues: residues
+                    });
+                }
+            });
+            
+            return result;
+        }
+        
+        function displayFastaSequence(sequence) {
+            const fastaTracker = document.getElementById('fasta-tracker');
+            const fastaSequence = document.getElementById('fasta-sequence');
+            const fastaInfo = document.getElementById('fasta-info');
+            
+            if (!fastaTracker || !fastaSequence || !fastaInfo) return;
+            
+            if (!sequence || sequence.length === 0) {
+                fastaTracker.style.display = 'none';
+                return;
+            }
+            
+            let html = '';
+            let totalResidues = 0;
+            let globalPosition = 0;
+            
+            // Create a flat mapping of position to residue data
+            window.fastaPositionMap = [];
+            
+            sequence.forEach((chainData, chainIndex) => {
+                // Add chain header
+                html += `<div class="chain-header">Chain ${chainData.chain}</div>`;
+                
+                let chainSequence = '';
+                chainData.residues.forEach((residue, index) => {
+                    if (!residue.chain || !residue.resi || !residue.resn) return;
+                    
+                    chainSequence += residue.resn;
+                    
+                    // Store mapping for position to residue
+                    window.fastaPositionMap.push({
+                        chain: residue.chain,
+                        resi: residue.resi,
+                        resn: residue.resn,
+                        globalPos: globalPosition,
+                        chainPos: index
+                    });
+                    
+                    globalPosition++;
+                    totalResidues++;
+                });
+                
+                // Format sequence in lines of 60 characters with line numbers
+                const lineLength = 60;
+                let currentPos = 0;
+                
+                while (currentPos < chainSequence.length) {
+                    const lineSeq = chainSequence.substring(currentPos, currentPos + lineLength);
+                    const lineNum = currentPos + 1;
+                    
+                    html += `<div class="fasta-line">`;
+                    html += `<span class="fasta-line-number">${lineNum}</span>`;
+                    html += `<span class="fasta-sequence-data" data-start="${globalPosition - totalResidues + currentPos}" data-end="${globalPosition - totalResidues + currentPos + lineSeq.length - 1}">${lineSeq}</span>`;
+                    html += `</div>`;
+                    
+                    currentPos += lineLength;
+                }
+                
+                if (chainIndex < sequence.length - 1) {
+                    html += '<div style="margin: 8px 0;"></div>';
+                }
+            });
+            
+            if (totalResidues === 0) {
+                fastaTracker.style.display = 'none';
+                return;
+            }
+            
+            fastaSequence.innerHTML = html;
+            fastaInfo.textContent = `${totalResidues} residues across ${sequence.length} chain(s) - Select text to highlight in 3D`;
+            fastaTracker.style.display = 'block';
+            
+            // Set up selection event listeners
+            setupFastaSelectionHandlers();
+        }
+        
+        function setupFastaSelectionHandlers() {
+            const fastaSequence = document.getElementById('fasta-sequence');
+            if (!fastaSequence) return;
+            
+            // Clear any existing listeners
+            fastaSequence.removeEventListener('mouseup', handleFastaSelection);
+            fastaSequence.removeEventListener('keyup', handleFastaSelection);
+            
+            // Add selection event listeners
+            fastaSequence.addEventListener('mouseup', handleFastaSelection);
+            fastaSequence.addEventListener('keyup', handleFastaSelection);
+            
+            // Also listen for selection changes
+            document.addEventListener('selectionchange', () => {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    if (fastaSequence.contains(range.commonAncestorContainer)) {
+                        setTimeout(handleFastaSelection, 10); // Small delay to ensure selection is complete
+                    }
+                }
+            });
+        }
+        
+        function handleFastaSelection() {
+            const selection = window.getSelection();
+            const selectionInfo = document.getElementById('selection-info');
+            const selectionRange = document.getElementById('selection-range');
+            const selectionCount = document.getElementById('selection-count');
+            
+            if (!selection.rangeCount || selection.isCollapsed) {
+                // No selection - clear highlights
+                clearFastaHighlights();
+                clear3DHighlight();
+                if (selectionInfo) selectionInfo.classList.remove('show');
+                return;
+            }
+            
+            const selectedText = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
+            if (selectedText.length === 0) {
+                clearFastaHighlights();
+                clear3DHighlight();
+                if (selectionInfo) selectionInfo.classList.remove('show');
+                return;
+            }
+            
+            // Find the selected residues
+            const selectedResidues = getSelectedResidues(selection);
+            
+            if (selectedResidues.length > 0) {
+                // Update selection info
+                if (selectionInfo && selectionRange && selectionCount) {
+                    const firstResidue = selectedResidues[0];
+                    const lastResidue = selectedResidues[selectedResidues.length - 1];
+                    
+                    selectionRange.textContent = selectedResidues.length === 1 
+                        ? `${firstResidue.resn}${firstResidue.resi} (Chain ${firstResidue.chain})`
+                        : `${firstResidue.resn}${firstResidue.resi} - ${lastResidue.resn}${lastResidue.resi} (Chain ${firstResidue.chain})`;
+                    
+                    selectionCount.textContent = `${selectedResidues.length} residue${selectedResidues.length > 1 ? 's' : ''} selected`;
+                    selectionInfo.classList.add('show');
+                }
+                
+                // Highlight in 3D
+                highlight3DResidueRange(selectedResidues);
+            } else {
+                clearFastaHighlights();
+                clear3DHighlight();
+                if (selectionInfo) selectionInfo.classList.remove('show');
+            }
+        }
+        
+        function getSelectedResidues(selection) {
+            if (!window.fastaPositionMap || !selection.rangeCount) return [];
+            
+            const range = selection.getRangeAt(0);
+            const fastaSequence = document.getElementById('fasta-sequence');
+            
+            if (!fastaSequence.contains(range.commonAncestorContainer)) return [];
+            
+            const selectedResidues = [];
+            const selectedText = selection.toString().replace(/\s+/g, '').replace(/\d+/g, '');
+            
+            // Find all sequence data elements that intersect with the selection
+            const sequenceElements = fastaSequence.querySelectorAll('.fasta-sequence-data');
+            
+            sequenceElements.forEach(element => {
+                const elementRange = document.createRange();
+                elementRange.selectNodeContents(element);
+                
+                // Check if this element intersects with the selection
+                if (range.intersectsNode(element)) {
+                    const startPos = parseInt(element.dataset.start);
+                    const endPos = parseInt(element.dataset.end);
+                    
+                    // Get the relative positions within this element
+                    const elementText = element.textContent;
+                    let selectionStart = 0;
+                    let selectionEnd = elementText.length - 1;
+                    
+                    // If the selection starts within this element
+                    if (range.startContainer === element.firstChild || element.contains(range.startContainer)) {
+                        selectionStart = range.startOffset;
+                    }
+                    
+                    // If the selection ends within this element
+                    if (range.endContainer === element.firstChild || element.contains(range.endContainer)) {
+                        selectionEnd = range.endOffset - 1;
+                    }
+                    
+                    // Map to residue positions
+                    for (let i = selectionStart; i <= Math.min(selectionEnd, elementText.length - 1); i++) {
+                        const globalPos = startPos + i;
+                        const residue = window.fastaPositionMap[globalPos];
+                        if (residue && !selectedResidues.some(r => r.chain === residue.chain && r.resi === residue.resi)) {
+                            selectedResidues.push(residue);
+                        }
+                    }
+                }
+            });
+            
+            return selectedResidues.sort((a, b) => {
+                if (a.chain !== b.chain) return a.chain.localeCompare(b.chain);
+                return a.resi - b.resi;
+            });
+        }
+        
+        function clearFastaHighlights() {
+            try {
+                document.querySelectorAll('.fasta-sequence-data.highlighted').forEach(el => {
+                    el.classList.remove('highlighted');
+                });
+            } catch (error) {
+                console.warn('Error clearing FASTA highlights:', error);
+            }
+        }
+        
+        function clearFastaSelection() {
+            try {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                clearFastaHighlights();
+                
+                const selectionInfo = document.getElementById('selection-info');
+                if (selectionInfo) selectionInfo.classList.remove('show');
+                
+                selectedResidue = null;
+            } catch (error) {
+                console.warn('Error clearing FASTA selection:', error);
+            }
+        }
+        
+        function highlight3DResidue(residue) {
+            if (!currentModel) return;
+            
+            // Clear previous hover styles only
+            currentModel.removeStyle({}, {stick: true, sphere: true});
+            
+            // Reapply base style
+            updateStyle();
+            
+            // Add hover highlight
+            const residueSelector = {
+                chain: residue.chain,
+                resi: residue.resi
+            };
+            
+            viewer.addStyle(residueSelector, {
+                stick: {
+                    color: '#4a9eff',
+                    radius: 0.35,
+                    alpha: 0.9
+                },
+                sphere: {
+                    color: '#4a9eff',
+                    radius: 0.6,
+                    alpha: 0.7
+                }
+            });
+            
+            throttledRender();
+        }
+        
+        function clear3DHighlight() {
+            if (!currentModel) return;
+            
+            // Clear all styles and reapply original
+            currentModel.removeStyle({}, {stick: true, sphere: true});
+            
+            // Reapply the current style without hover effects
+            updateStyle();
+            
+            // Re-add selection highlight if there's a selected residue
+            if (selectedAtoms.length > 0) {
+                const firstAtom = selectedAtoms[0];
+                const residueSelector = {
+                    chain: firstAtom.chain,
+                    resi: firstAtom.resi
+                };
+                
+                viewer.addStyle(residueSelector, {
+                    stick: {
+                        color: '#ffff00',
+                        radius: 0.4
+                    },
+                    sphere: {
+                        color: '#ffff00',
+                        radius: 0.6,
+                        alpha: 0.8
+                    }
+                });
+            }
+            
+            throttledRender();
+        }
+        
+        // Remove old hover handling - now using text selection
+        function setupHoverHandling() {
+            // Hover handling is no longer needed with text selection approach
+            // This function is kept for compatibility but does nothing
+            return;
         }
         
         // File input handling (optimized)
@@ -2329,4 +2715,60 @@
             if (levelDisplay) {
                 levelDisplay.textContent = `${pdbZoomLevel}%`;
             }
+        }
+
+        function clearFastaHighlights() {
+            try {
+                document.querySelectorAll('.fasta-sequence-data.highlighted').forEach(el => {
+                    el.classList.remove('highlighted');
+                });
+            } catch (error) {
+                console.warn('Error clearing FASTA highlights:', error);
+            }
+        }
+        
+        function clearFastaSelection() {
+            try {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                clearFastaHighlights();
+                
+                const selectionInfo = document.getElementById('selection-info');
+                if (selectionInfo) selectionInfo.classList.remove('show');
+                
+                selectedResidue = null;
+            } catch (error) {
+                console.warn('Error clearing FASTA selection:', error);
+            }
+        }
+        
+        function highlight3DResidueRange(residues) {
+            if (!currentModel || !residues || residues.length === 0) return;
+            
+            // Clear previous styles
+            currentModel.removeStyle({}, {stick: true, sphere: true});
+            updateStyle();
+            
+            // Highlight selected residues
+            residues.forEach(residue => {
+                const residueSelector = {
+                    chain: residue.chain,
+                    resi: residue.resi
+                };
+                
+                viewer.addStyle(residueSelector, {
+                    stick: {
+                        color: '#4a9eff',
+                        radius: 0.35,
+                        alpha: 0.9
+                    },
+                    sphere: {
+                        color: '#4a9eff',
+                        radius: 0.6,
+                        alpha: 0.7
+                    }
+                });
+            });
+            
+            throttledRender();
         }

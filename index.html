@@ -34,6 +34,21 @@
                 <div class="tab-content">
                     <!-- 3D View Tab -->
                     <div id="3d-view-panel" class="tab-panel active">
+                        <!-- FASTA Sequence Tracker -->
+                        <div id="fasta-tracker" class="fasta-tracker" style="display: none;">
+                            <div class="fasta-header">
+                                <span class="fasta-title">Protein Sequence</span>
+                                <span class="fasta-info" id="fasta-info">Select sequence range to highlight in 3D</span>
+                            </div>
+                            <div class="fasta-sequence-container">
+                                <div class="fasta-sequence" id="fasta-sequence"></div>
+                            </div>
+                            <div class="selection-info" id="selection-info">
+                                <span class="selection-range" id="selection-range"></span>
+                                <span class="selection-count" id="selection-count"></span>
+                            </div>
+                        </div>
+                        
                         <div id="viewer-container"></div>
                         
                         <!-- amino acid detail modal -->

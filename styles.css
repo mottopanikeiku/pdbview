@@ -1230,4 +1230,159 @@ button:active {
 
 .paper-viewer-body a:hover {
     text-decoration: underline;
+}
+
+/* FASTA Sequence Tracker */
+.fasta-tracker {
+    background: linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 100%);
+    border: 1px solid #444444;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.fasta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #444444;
+}
+
+.fasta-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+}
+
+.fasta-title::before {
+    content: "🧬";
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.fasta-info {
+    font-size: 11px;
+    color: #aaaaaa;
+    font-weight: 400;
+}
+
+.fasta-sequence-container {
+    max-height: 140px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    border: 1px solid #333333;
+}
+
+.fasta-sequence {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #e0e0e0;
+    user-select: text;
+    cursor: text;
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 4px 0;
+}
+
+.fasta-sequence::selection {
+    background: rgba(74, 158, 255, 0.3);
+    color: #ffffff;
+}
+
+.fasta-sequence::-moz-selection {
+    background: rgba(74, 158, 255, 0.3);
+    color: #ffffff;
+}
+
+.fasta-line {
+    display: block;
+    margin-bottom: 4px;
+    position: relative;
+}
+
+.fasta-line-number {
+    display: inline-block;
+    width: 50px;
+    color: #888888;
+    font-size: 10px;
+    margin-right: 10px;
+    text-align: right;
+    user-select: none;
+}
+
+.fasta-sequence-data {
+    display: inline;
+    letter-spacing: 1px;
+}
+
+.fasta-sequence-data.highlighted {
+    background: rgba(74, 158, 255, 0.4);
+    color: #ffffff;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.chain-header {
+    color: #4a9eff;
+    font-weight: bold;
+    margin: 8px 0 4px 0;
+    font-size: 13px;
+    border-bottom: 1px solid #444444;
+    padding-bottom: 2px;
+}
+
+.selection-info {
+    background: #2a2a2a;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #cccccc;
+    display: none;
+}
+
+.selection-info.show {
+    display: block;
+}
+
+.selection-range {
+    color: #4a9eff;
+    font-weight: bold;
+}
+
+.selection-count {
+    color: #51cf66;
+    font-weight: bold;
+}
+
+/* Enhanced scrollbar styling for FASTA sequence */
+.fasta-sequence-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fasta-sequence-container::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 3px;
+}
+
+.fasta-sequence-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #404040 0%, #555555 100%);
+    border-radius: 3px;
+    border: 1px solid #333333;
+}
+
+.fasta-sequence-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #555555 0%, #666666 100%);
 } 
