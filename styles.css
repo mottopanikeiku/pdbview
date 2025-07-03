@@ -1232,252 +1232,177 @@ button:active {
     text-decoration: underline;
 }
 
-/* FASTA Sequence Tracker */
-.fasta-tracker {
-    background: linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 100%);
-    border: 1px solid #444444;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+/* Minimal FASTA Sequence Viewer */
+.fasta-viewer {
+    position: relative;
+    margin-top: 12px;
+    border-top: 1px solid #333333;
+    padding-top: 12px;
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    contain: layout style paint;
 }
 
-.fasta-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #444444;
-}
-
-.fasta-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    display: flex;
-    align-items: center;
-}
-
-.fasta-title::before {
-    content: "🧬";
-    margin-right: 8px;
-    font-size: 16px;
-}
-
-.fasta-info {
-    font-size: 11px;
-    color: #aaaaaa;
-    font-weight: 400;
-}
-
-.fasta-sequence-container {
-    max-height: 140px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px;
-    background: #1a1a1a;
-    border-radius: 6px;
-    border: 1px solid #333333;
-}
-
-.fasta-sequence {
+.fasta-sequence-display {
     font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 12px;
+    line-height: 1.4;
     color: #e0e0e0;
-    user-select: none;
-    cursor: default;
+    padding: 8px 12px;
+    background: rgba(26, 26, 26, 0.8);
+    border: 1px solid #333333;
+    border-radius: 4px;
+    margin-bottom: 8px;
     white-space: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 12px 8px;
-    background: #1a1a1a;
-    border: 1px solid #333333;
-    border-radius: 6px;
-    letter-spacing: 2px;
-    margin-bottom: 16px;
+    letter-spacing: 1px;
+    min-height: 32px;
+    user-select: none;
+    /* Performance optimizations */
+    will-change: scroll-position;
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
 }
 
-.fasta-residue {
-    display: inline;
-    padding: 2px 1px;
-    transition: all 0.2s ease;
+.fasta-navigator {
+    position: relative;
+    padding: 0 12px;
 }
 
-.fasta-residue.highlighted {
-    background: linear-gradient(135deg, #4a9eff 0%, #6bb6ff 100%);
-    color: #ffffff;
-    border-radius: 3px;
-    box-shadow: 0 2px 4px rgba(74, 158, 255, 0.3);
-    font-weight: bold;
-    transform: scale(1.1);
-}
-
-.slider-controls {
-    background: #2a2a2a;
-    border: 1px solid #444444;
-    border-radius: 6px;
-    padding: 16px;
-    margin-bottom: 12px;
-}
-
-.slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.slider-title {
-    font-size: 12px;
-    font-weight: 500;
-    color: #cccccc;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.slider-info {
-    font-size: 11px;
-    color: #888888;
-}
-
-.slider-container {
-    margin-bottom: 12px;
-}
-
-.position-slider {
+.fasta-slider {
     width: 100%;
-    height: 6px;
-    background: #333333;
-    border-radius: 3px;
+    height: 3px;
+    background: transparent;
+    border: none;
     outline: none;
     appearance: none;
     cursor: pointer;
     position: relative;
+    margin: 8px 0;
 }
 
-.position-slider::-webkit-slider-thumb {
+.fasta-slider::-webkit-slider-track {
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    border-top: 1px solid #555555;
+    border-bottom: 1px solid #555555;
+    position: relative;
+}
+
+.fasta-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 20px;
-    height: 20px;
-    background: linear-gradient(135deg, #4a9eff 0%, #6bb6ff 100%);
+    width: 12px;
+    height: 12px;
+    background: rgba(74, 158, 255, 0.8);
+    border: 1px solid #4a9eff;
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(74, 158, 255, 0.4);
-    transition: all 0.2s ease;
+    box-shadow: 0 0 8px rgba(74, 158, 255, 0.3);
+    transition: all 0.15s ease;
+    position: relative;
+    z-index: 2;
 }
 
-.position-slider::-webkit-slider-thumb:hover {
+.fasta-slider::-webkit-slider-thumb:hover {
+    background: rgba(74, 158, 255, 1);
     transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.6);
+    box-shadow: 0 0 12px rgba(74, 158, 255, 0.5);
 }
 
-.position-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    background: linear-gradient(135deg, #4a9eff 0%, #6bb6ff 100%);
+.fasta-slider::-moz-range-track {
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    border-top: 1px solid #555555;
+    border-bottom: 1px solid #555555;
+}
+
+.fasta-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: rgba(74, 158, 255, 0.8);
+    border: 1px solid #4a9eff;
     border-radius: 50%;
     cursor: pointer;
-    border: none;
-    box-shadow: 0 2px 6px rgba(74, 158, 255, 0.4);
-}
-
-.window-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.window-control-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.control-label {
-    font-size: 11px;
-    color: #aaaaaa;
-    font-weight: 500;
-    min-width: 80px;
-}
-
-.window-size-input {
-    width: 80px;
-    padding: 6px 8px;
-    background: #1a1a1a;
-    border: 1px solid #444444;
-    border-radius: 4px;
-    color: #e0e0e0;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    text-align: center;
-}
-
-.window-size-input:focus {
-    outline: none;
-    border-color: #4a9eff;
     box-shadow: 0 0 8px rgba(74, 158, 255, 0.3);
 }
 
-.position-display {
+.fasta-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.fasta-position {
     font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #4a9eff;
-    font-weight: bold;
-    padding: 6px 12px;
-    background: #1a1a1a;
-    border: 1px solid #333333;
-    border-radius: 4px;
-    min-width: 120px;
+    font-size: 10px;
+    color: #888888;
+    font-weight: 500;
+}
+
+.window-size {
+    width: 50px;
+    padding: 3px 6px;
+    background: rgba(26, 26, 26, 0.8);
+    border: 1px solid #444444;
+    border-radius: 3px;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
     text-align: center;
+    outline: none;
+}
+
+.window-size:focus {
+    border-color: #4a9eff;
+    box-shadow: 0 0 4px rgba(74, 158, 255, 0.3);
+}
+
+.fasta-residue {
+    display: inline;
+    padding: 1px 2px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.fasta-residue.highlighted {
+    background: rgba(74, 158, 255, 0.3);
+    color: #ffffff;
+    border-radius: 2px;
+    font-weight: bold;
+}
+
+.fasta-residue:hover {
+    background: rgba(74, 158, 255, 0.2);
+    border-radius: 2px;
 }
 
 .chain-separator {
     color: #666666;
-    margin: 0 4px;
+    margin: 0 3px;
     font-weight: bold;
 }
 
-/* Scrollbar styling for FASTA sequence */
-.fasta-sequence::-webkit-scrollbar {
-    height: 8px;
+/* Scrollbar styling for FASTA sequence display */
+.fasta-sequence-display::-webkit-scrollbar {
+    height: 6px;
 }
 
-.fasta-sequence::-webkit-scrollbar-track {
-    background: #1a1a1a;
-    border-radius: 4px;
-}
-
-.fasta-sequence::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #404040 0%, #555555 100%);
-    border-radius: 4px;
-    border: 1px solid #333333;
-}
-
-.fasta-sequence::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #555555 0%, #666666 100%);
-}
-
-/* Enhanced scrollbar styling for FASTA sequence */
-.fasta-sequence-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.fasta-sequence-container::-webkit-scrollbar-track {
-    background: #1a1a1a;
+.fasta-sequence-display::-webkit-scrollbar-track {
+    background: rgba(26, 26, 26, 0.5);
     border-radius: 3px;
 }
 
-.fasta-sequence-container::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #404040 0%, #555555 100%);
+.fasta-sequence-display::-webkit-scrollbar-thumb {
+    background: rgba(74, 158, 255, 0.3);
     border-radius: 3px;
-    border: 1px solid #333333;
+    border: 1px solid rgba(74, 158, 255, 0.5);
 }
 
-.fasta-sequence-container::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #555555 0%, #666666 100%);
+.fasta-sequence-display::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 158, 255, 0.5);
 } 

@@ -34,39 +34,21 @@
                 <div class="tab-content">
                     <!-- 3D View Tab -->
                     <div id="3d-view-panel" class="tab-panel active">
-                        <!-- FASTA Sequence Tracker -->
-                        <div id="fasta-tracker" class="fasta-tracker" style="display: none;">
-                            <div class="fasta-header">
-                                <span class="fasta-title">Protein Sequence</span>
-                                <span class="fasta-info" id="fasta-info">Use slider to scan through sequence</span>
-                            </div>
-                            <div class="fasta-sequence-container">
-                                <div class="fasta-sequence" id="fasta-sequence"></div>
-                            </div>
-                            <div class="slider-controls">
-                                <div class="slider-header">
-                                    <span class="slider-title">Sequence Scanner</span>
-                                    <span class="slider-info" id="slider-info">Scan through protein regions</span>
-                                </div>
-                                <div class="slider-container">
-                                    <input type="range" class="position-slider" id="position-slider" 
-                                           min="0" max="100" value="0" step="1">
-                                </div>
-                                <div class="window-controls">
-                                    <div class="window-control-group">
-                                        <span class="control-label">Window Size:</span>
-                                        <input type="number" class="window-size-input" id="window-size" 
-                                               value="10" min="1" max="50">
-                                    </div>
-                                    <div class="window-control-group">
-                                        <span class="control-label">Position:</span>
-                                        <div class="position-display" id="position-display">1-10</div>
-                                    </div>
+                        <div id="viewer-container"></div>
+                        
+                        <!-- Minimal FASTA Sequence Viewer -->
+                        <div id="fasta-viewer" class="fasta-viewer" style="display: none;">
+                            <div class="fasta-sequence-display" id="fasta-sequence-display"></div>
+                            <div class="fasta-navigator">
+                                <input type="range" class="fasta-slider" id="fasta-slider" 
+                                       min="0" max="100" value="0" step="1">
+                                <div class="fasta-controls">
+                                    <span class="fasta-position" id="fasta-position">0 / 0</span>
+                                    <input type="number" class="window-size" id="fasta-window-size" 
+                                           value="10" min="1" max="50" title="Window size">
                                 </div>
                             </div>
                         </div>
-                        
-                        <div id="viewer-container"></div>
                         
                         <!-- amino acid detail modal -->
                         <div id="amino-acid-modal" class="amino-acid-modal">
@@ -198,7 +180,7 @@
                 <h3>Load Structure</h3>
                 <div class="control-group">
                     <label for="pdb-id">PDB ID</label>
-                    <input type="text" id="pdb-id" placeholder="e.g., 1BNA" value="">
+                    <input type="text" id="pdb-id" placeholder="e.g., 1BNA" value="1BNA">
                     <button onclick="loadPDBFromId()">Load from Database</button>
                     <div id="pdb-validation-indicator" class="pdb-validation-indicator"></div>
                     <div id="pdb-error-display" class="pdb-error-display"></div>
@@ -254,6 +236,7 @@
                 <button onclick="clearViewer()">Clear</button>
                 <button onclick="toggleFullscreen()">Fullscreen</button>
                 <button id="interactive-btn" onclick="toggleInteractiveMode()">Interactive Mode: OFF</button>
+                <button onclick="toggleFastaViewer()">Show Sequence</button>
             </div>
             
             <div class="control-panel">

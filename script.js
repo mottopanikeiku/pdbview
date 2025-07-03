@@ -278,6 +278,9 @@
             
             // Set up keyboard shortcuts
             setupKeyboardShortcuts();
+            
+            // Initialize FASTA button state
+            updateFastaButton();
         }
         
         function initializeAdvancedFeatures() {
@@ -765,6 +768,7 @@
                     // Extract and display protein sequence
                     proteinSequence = extractProteinSequence(currentModel);
                     displayFastaSequence(proteinSequence);
+                    updateFastaButton();
                     
                     // Set up hover handling
                     setupHoverHandling();
@@ -850,6 +854,7 @@
                     // Extract and display protein sequence
                     proteinSequence = extractProteinSequence(currentModel);
                     displayFastaSequence(proteinSequence);
+                    updateFastaButton();
                     
                     // Set up hover handling
                     setupHoverHandling();
@@ -935,6 +940,8 @@
             throttledRender();
         }
         
+
+        
         function centerView() {
             if (viewer) {
                 viewer.zoomTo();
@@ -956,19 +963,6 @@
                 clearRawPdb();
                 clearPdbError(); // Clear any PDB errors
                 hidePdbValidationIndicator(); // Clear validation indicator
-                
-                // Clear FASTA state
-                proteinSequence = [];
-                hoveredResidue = null;
-                selectedResidue = null;
-                clearTimeout(hoverTimeout);
-                
-                // Hide FASTA tracker
-                const fastaTracker = document.getElementById('fasta-tracker');
-                if (fastaTracker) {
-                    fastaTracker.style.display = 'none';
-                }
-                
                 showMessage('Display cleared');
                 
                 // Turn off interactive mode
@@ -999,6 +993,11 @@
                 
                 // Clean up resources
                 MemoryManager.cleanupResources();
+                
+                // Clear FASTA state and update button
+                window.fastaPositionMap = [];
+                window.fastaLargeSequenceMode = false;
+                updateFastaButton();
             }
         }
         
@@ -1430,113 +1429,234 @@
         }
         
         function displayFastaSequence(sequence) {
-            const fastaTracker = document.getElementById('fasta-tracker');
-            const fastaSequence = document.getElementById('fasta-sequence');
-            const fastaInfo = document.getElementById('fasta-info');
-            
-            if (!fastaTracker || !fastaSequence || !fastaInfo) return;
-            
             if (!sequence || sequence.length === 0) {
-                fastaTracker.style.display = 'none';
                 return;
             }
             
-            let html = '';
-            let totalResidues = 0;
-            
             // Create a flat mapping of position to residue data
             window.fastaPositionMap = [];
+            let totalResidues = 0;
             
+            // First pass: build position map (lightweight)
             sequence.forEach((chainData, chainIndex) => {
-                if (chainIndex > 0) {
-                    html += '<span class="chain-separator">|</span>';
-                }
-                
                 chainData.residues.forEach((residue, index) => {
                     if (!residue.chain || !residue.resi || !residue.resn) return;
                     
-                    // Store mapping for position to residue
                     window.fastaPositionMap.push({
                         chain: residue.chain,
                         resi: residue.resi,
                         resn: residue.resn,
                         globalPos: totalResidues,
-                        chainPos: index
+                        chainPos: index,
+                        chainIndex: chainIndex
                     });
-                    
-                    html += `<span class="fasta-residue" data-pos="${totalResidues}" id="residue-${totalResidues}">${residue.resn}</span>`;
                     totalResidues++;
                 });
             });
             
             if (totalResidues === 0) {
-                fastaTracker.style.display = 'none';
                 return;
             }
             
-            fastaSequence.innerHTML = html;
-            fastaInfo.textContent = `${totalResidues} residues across ${sequence.length} chain(s)`;
-            fastaTracker.style.display = 'block';
+            const fastaDisplay = document.getElementById('fasta-sequence-display');
+            const fastaSlider = document.getElementById('fasta-slider');
+            const fastaPosition = document.getElementById('fasta-position');
+            const windowSize = document.getElementById('fasta-window-size');
             
-            // Set up slider functionality
-            setupSliderControls(totalResidues);
-        }
-        
-        function setupSliderControls(totalResidues) {
-            const positionSlider = document.getElementById('position-slider');
-            const windowSizeInput = document.getElementById('window-size');
-            const positionDisplay = document.getElementById('position-display');
-            const sliderInfo = document.getElementById('slider-info');
+            // Safe threshold for DOM rendering (much lower to prevent crashes)
+            const SAFE_DISPLAY_LIMIT = 1500;
             
-            if (!positionSlider || !windowSizeInput || !positionDisplay) return;
-            
-            // Configure slider
-            positionSlider.min = 0;
-            positionSlider.max = Math.max(0, totalResidues - 1);
-            positionSlider.value = 0;
-            
-            // Configure window size input
-            windowSizeInput.max = Math.min(50, totalResidues);
-            windowSizeInput.value = Math.min(10, totalResidues);
-            
-            // Update display
-            updatePositionDisplay();
-            if (sliderInfo) {
-                sliderInfo.textContent = `${totalResidues} total residues`;
+            if (fastaDisplay) {
+                if (totalResidues > SAFE_DISPLAY_LIMIT) {
+                    // For large sequences: show summary and navigation-only mode
+                    fastaDisplay.innerHTML = `
+                        <div style="color: #888; text-align: center; padding: 20px; line-height: 1.6;">
+                            <div style="color: #fff; font-size: 14px; margin-bottom: 8px;">
+                                <strong>Large Protein Sequence</strong>
+                            </div>
+                            <div style="font-size: 12px; margin-bottom: 12px;">
+                                ${totalResidues} residues across ${sequence.length} chain${sequence.length > 1 ? 's' : ''}
+                            </div>
+                            <div style="font-size: 11px; color: #666;">
+                                Use the slider below to navigate and highlight specific regions in the 3D structure.
+                                <br>Large sequences are not displayed to prevent browser crashes.
+                            </div>
+                        </div>
+                    `;
+                    window.fastaLargeSequenceMode = true;
+                } else {
+                    // For smaller sequences: build and display full sequence
+                    let html = '';
+                    sequence.forEach((chainData, chainIndex) => {
+                        if (chainIndex > 0) {
+                            html += '<span class="chain-separator">|</span>';
+                        }
+                        chainData.residues.forEach((residue, index) => {
+                            if (!residue.chain || !residue.resi || !residue.resn) return;
+                            const globalPos = window.fastaPositionMap.findIndex(r => 
+                                r.chain === residue.chain && r.resi === residue.resi && r.chainIndex === chainIndex
+                            );
+                            if (globalPos >= 0) {
+                                html += `<span class="fasta-residue" data-pos="${globalPos}" id="residue-${globalPos}">${residue.resn}</span>`;
+                            }
+                        });
+                    });
+                    fastaDisplay.innerHTML = html;
+                    window.fastaLargeSequenceMode = false;
+                }
             }
             
-            // Add event listeners
-            positionSlider.addEventListener('input', handleSliderChange);
-            windowSizeInput.addEventListener('input', handleWindowSizeChange);
-            
-            // Initial highlight
-            highlightCurrentWindow();
-        }
-        
-        function handleSliderChange() {
-            updatePositionDisplay();
-            highlightCurrentWindow();
-        }
-        
-        function handleWindowSizeChange() {
-            const windowSizeInput = document.getElementById('window-size');
-            const positionSlider = document.getElementById('position-slider');
-            
-            if (!windowSizeInput || !positionSlider) return;
-            
-            const windowSize = parseInt(windowSizeInput.value);
-            const totalResidues = window.fastaPositionMap ? window.fastaPositionMap.length : 0;
-            
-            // Adjust slider max based on window size
-            positionSlider.max = Math.max(0, totalResidues - windowSize);
-            
-            // Ensure current position is valid
-            if (parseInt(positionSlider.value) > parseInt(positionSlider.max)) {
-                positionSlider.value = positionSlider.max;
+            // Set up navigation controls
+            if (fastaSlider) {
+                fastaSlider.min = 0;
+                fastaSlider.max = Math.max(0, totalResidues - 1);
+                fastaSlider.value = 0;
+                
+                // Remove old listeners to prevent memory leaks
+                fastaSlider.removeEventListener('input', handleFastaNavigation);
+                fastaSlider.addEventListener('input', handleFastaNavigation);
             }
             
-            updatePositionDisplay();
-            highlightCurrentWindow();
+            if (windowSize) {
+                const maxWindow = Math.min(50, Math.floor(totalResidues / 10));
+                windowSize.max = Math.max(1, maxWindow);
+                windowSize.value = Math.min(10, maxWindow);
+                
+                windowSize.removeEventListener('input', handleFastaNavigation);
+                windowSize.addEventListener('input', handleFastaNavigation);
+            }
+            
+            if (fastaPosition) {
+                fastaPosition.textContent = `1 / ${totalResidues}`;
+            }
+            
+            // Show helpful message for large sequences
+            if (totalResidues > SAFE_DISPLAY_LIMIT) {
+                showMessage(`Large protein sequence loaded (${totalResidues} residues). Use slider to navigate.`, 'info');
+            }
+            
+            // Update button text
+            updateFastaButton();
+        }
+        
+        // Toggle FASTA viewer visibility
+        function toggleFastaViewer() {
+            const fastaViewer = document.getElementById('fasta-viewer');
+            const toggleButton = document.querySelector('button[onclick="toggleFastaViewer()"]');
+            
+            if (!fastaViewer || !toggleButton) return;
+            
+            if (fastaViewer.style.display === 'none' || !fastaViewer.style.display) {
+                fastaViewer.style.display = 'block';
+                toggleButton.textContent = 'Hide Sequence';
+            } else {
+                fastaViewer.style.display = 'none';
+                toggleButton.textContent = 'Show Sequence';
+            }
+        }
+        
+        // Handle FASTA navigation
+        function handleFastaNavigation() {
+            const fastaSlider = document.getElementById('fasta-slider');
+            const fastaPosition = document.getElementById('fasta-position');
+            const windowSize = document.getElementById('fasta-window-size');
+            const fastaDisplay = document.getElementById('fasta-sequence-display');
+            
+            if (!fastaSlider || !fastaPosition || !window.fastaPositionMap) return;
+            
+            const currentPos = parseInt(fastaSlider.value);
+            const totalResidues = window.fastaPositionMap.length;
+            const winSize = windowSize ? parseInt(windowSize.value) : 10;
+            
+            // Update position display
+            fastaPosition.textContent = `${currentPos + 1} / ${totalResidues}`;
+            
+            // Highlight current residue range in 3D if window size is being used
+            if (winSize > 1) {
+                highlightFastaWindow(currentPos, winSize);
+            } else {
+                highlightSingleResidue(currentPos);
+            }
+            
+            // Only try to scroll if we're not in large sequence mode
+            if (!window.fastaLargeSequenceMode && fastaDisplay) {
+                const residueElement = document.getElementById(`residue-${currentPos}`);
+                if (residueElement) {
+                    residueElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center',
+                        inline: 'center'
+                    });
+                }
+            }
+        }
+        
+        // Highlight window of residues
+        function highlightFastaWindow(startPos, windowSize) {
+            if (!window.fastaPositionMap) return;
+            
+            // Clear previous highlights
+            clearFastaHighlights();
+            
+            const endPos = Math.min(startPos + windowSize - 1, window.fastaPositionMap.length - 1);
+            const windowResidues = [];
+            
+            for (let i = startPos; i <= endPos; i++) {
+                const residue = window.fastaPositionMap[i];
+                if (residue) {
+                    windowResidues.push(residue);
+                    
+                    // Only highlight in FASTA if not in large sequence mode
+                    if (!window.fastaLargeSequenceMode) {
+                        const residueElement = document.getElementById(`residue-${i}`);
+                        if (residueElement) {
+                            residueElement.classList.add('highlighted');
+                        }
+                    }
+                }
+            }
+            
+            // Always highlight in 3D (this is the main purpose for large sequences)
+            highlight3DResidueRange(windowResidues);
+        }
+        
+        // Highlight single residue
+        function highlightSingleResidue(pos) {
+            if (!window.fastaPositionMap || pos >= window.fastaPositionMap.length) return;
+            
+            clearFastaHighlights();
+            
+            const residue = window.fastaPositionMap[pos];
+            if (residue) {
+                // Only highlight in FASTA if not in large sequence mode
+                if (!window.fastaLargeSequenceMode) {
+                    const residueElement = document.getElementById(`residue-${pos}`);
+                    if (residueElement) {
+                        residueElement.classList.add('highlighted');
+                    }
+                }
+                
+                // Always highlight in 3D
+                highlight3DResidueRange([residue]);
+            }
+        }
+        
+        // Update button text based on whether sequence is available
+        function updateFastaButton() {
+            const toggleButton = document.querySelector('button[onclick="toggleFastaViewer()"]');
+            const fastaViewer = document.getElementById('fasta-viewer');
+            
+            if (!toggleButton) return;
+            
+            if (!window.fastaPositionMap || window.fastaPositionMap.length === 0) {
+                toggleButton.textContent = 'No Sequence';
+                toggleButton.disabled = true;
+                if (fastaViewer) fastaViewer.style.display = 'none';
+            } else {
+                toggleButton.disabled = false;
+                const isVisible = fastaViewer && fastaViewer.style.display !== 'none';
+                toggleButton.textContent = isVisible ? 'Hide Sequence' : 'Show Sequence';
+            }
         }
         
         function updatePositionDisplay() {
@@ -1606,12 +1726,15 @@
         }
         
         function clearFastaHighlights() {
-            try {
-                document.querySelectorAll('.fasta-residue.highlighted').forEach(el => {
-                    el.classList.remove('highlighted');
-                });
-            } catch (error) {
-                console.warn('Error clearing FASTA highlights:', error);
+            // Only clear highlights if not in large sequence mode (no DOM elements to clear)
+            if (!window.fastaLargeSequenceMode) {
+                try {
+                    document.querySelectorAll('.fasta-residue.highlighted').forEach(el => {
+                        el.classList.remove('highlighted');
+                    });
+                } catch (error) {
+                    console.warn('Error clearing FASTA highlights:', error);
+                }
             }
         }
         
