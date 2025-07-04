@@ -36,20 +36,6 @@
                     <div id="3d-view-panel" class="tab-panel active">
                         <div id="viewer-container"></div>
                         
-                        <!-- Minimal FASTA Sequence Viewer -->
-                        <div id="fasta-viewer" class="fasta-viewer" style="display: none;">
-                            <div class="fasta-sequence-display" id="fasta-sequence-display"></div>
-                            <div class="fasta-navigator">
-                                <input type="range" class="fasta-slider" id="fasta-slider" 
-                                       min="0" max="100" value="0" step="1">
-                                <div class="fasta-controls">
-                                    <span class="fasta-position" id="fasta-position">0 / 0</span>
-                                    <input type="number" class="window-size" id="fasta-window-size" 
-                                           value="10" min="1" max="50" title="Window size">
-                                </div>
-                            </div>
-                        </div>
-                        
                         <!-- amino acid detail modal -->
                         <div id="amino-acid-modal" class="amino-acid-modal">
                             <div class="modal-header">
@@ -180,7 +166,7 @@
                 <h3>Load Structure</h3>
                 <div class="control-group">
                     <label for="pdb-id">PDB ID</label>
-                    <input type="text" id="pdb-id" placeholder="e.g., 1BNA" value="1BNA">
+                    <input type="text" id="pdb-id" placeholder="e.g., 1BNA" value="">
                     <button onclick="loadPDBFromId()">Load from Database</button>
                     <div id="pdb-validation-indicator" class="pdb-validation-indicator"></div>
                     <div id="pdb-error-display" class="pdb-error-display"></div>
@@ -236,7 +222,6 @@
                 <button onclick="clearViewer()">Clear</button>
                 <button onclick="toggleFullscreen()">Fullscreen</button>
                 <button id="interactive-btn" onclick="toggleInteractiveMode()">Interactive Mode: OFF</button>
-                <button onclick="toggleFastaViewer()">Show Sequence</button>
             </div>
             
             <div class="control-panel">
