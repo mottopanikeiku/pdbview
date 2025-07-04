@@ -2303,7 +2303,10 @@
 
         function updateFastGridDimensions() {
             fastGrid.containerHeight = fastGrid.viewport.clientHeight;
-            fastGrid.visibleRowCount = Math.ceil(fastGrid.containerHeight / fastGrid.rowHeight) + fastGrid.buffer;
+            // Account for zoom level - when zoomed out (smaller %), we can see more rows
+            const effectiveHeight = fastGrid.containerHeight * (100 / pdbZoomLevel);
+            fastGrid.visibleRowCount = Math.ceil(effectiveHeight / fastGrid.rowHeight) + fastGrid.buffer;
+            console.log(`PDB Grid: zoom=${pdbZoomLevel}%, height=${fastGrid.containerHeight}px, effective=${effectiveHeight.toFixed(1)}px, visibleRows=${fastGrid.visibleRowCount}`);
         }
 
         function updateFastGridView() {
@@ -2595,8 +2598,10 @@
                 return;
             }
             
-            // Calculate visible range
-            const visibleRows = Math.ceil(viewportHeight / atomTable.rowHeight);
+            // Calculate visible range - account for zoom level (smaller % = more rows visible)
+            const effectiveHeight = viewportHeight * (100 / atomZoomLevel);
+            const visibleRows = Math.ceil(effectiveHeight / atomTable.rowHeight);
+            console.log(`Atom Table: zoom=${atomZoomLevel}%, viewport=${viewportHeight}px, effective=${effectiveHeight.toFixed(1)}px, visibleRows=${visibleRows}`);
             const startRow = Math.floor(scrollTop / atomTable.rowHeight);
             const endRow = Math.min(atomTable.filteredData.length - 1, startRow + visibleRows);
             
@@ -2744,15 +2749,23 @@
         let pdbZoomLevel = 100;
         
         function zoomAtomTable(direction) {
+            console.log(`🔍 zoomAtomTable called with direction: ${direction}`);
+            console.log(`Current atomZoomLevel: ${atomZoomLevel}%`);
+            
             if (direction === 'in') {
                 atomZoomLevel = Math.min(200, atomZoomLevel + 25);
             } else if (direction === 'out') {
                 atomZoomLevel = Math.max(50, atomZoomLevel - 25);
             }
             
+            console.log(`New atomZoomLevel: ${atomZoomLevel}%`);
+            
             // Apply transform to the parent container to maintain header alignment
             const container = document.querySelector('.atom-table-container');
             const levelDisplay = document.getElementById('atom-zoom-level');
+            
+            console.log('Container found:', !!container);
+            console.log('Level display found:', !!levelDisplay);
             
             if (container) {
                 container.style.transform = `scale(${atomZoomLevel / 100})`;
@@ -2761,24 +2774,43 @@
                 container.style.display = 'none';
                 container.offsetHeight; // Trigger reflow
                 container.style.display = '';
-                console.log(`Atom table zoom: ${atomZoomLevel}%`);
+                console.log(`✅ Atom table zoom applied: ${atomZoomLevel}%`);
+            } else {
+                console.error('❌ Atom table container not found!');
             }
             
             if (levelDisplay) {
                 levelDisplay.textContent = `${atomZoomLevel}%`;
+            } else {
+                console.error('❌ Atom zoom level display not found!');
             }
+            
+            // Recalculate and update view to show proper number of rows for new zoom level
+            setTimeout(() => {
+                console.log('🔄 Updating atom table view after zoom...');
+                updateAtomTableDimensions();
+                updateAtomTableView();
+            }, 50);
         }
         
         function zoomPdbTable(direction) {
+            console.log(`🔍 zoomPdbTable called with direction: ${direction}`);
+            console.log(`Current pdbZoomLevel: ${pdbZoomLevel}%`);
+            
             if (direction === 'in') {
                 pdbZoomLevel = Math.min(200, pdbZoomLevel + 25);
             } else if (direction === 'out') {
                 pdbZoomLevel = Math.max(50, pdbZoomLevel - 25);
             }
             
+            console.log(`New pdbZoomLevel: ${pdbZoomLevel}%`);
+            
             // Apply transform to the parent container to maintain header alignment
             const container = document.querySelector('.fast-grid-container');
             const levelDisplay = document.getElementById('pdb-zoom-level');
+            
+            console.log('PDB Container found:', !!container);
+            console.log('PDB Level display found:', !!levelDisplay);
             
             if (container) {
                 container.style.transform = `scale(${pdbZoomLevel / 100})`;
@@ -2787,13 +2819,45 @@
                 container.style.display = 'none';
                 container.offsetHeight; // Trigger reflow
                 container.style.display = '';
-                console.log(`PDB table zoom: ${pdbZoomLevel}%`);
+                console.log(`✅ PDB table zoom applied: ${pdbZoomLevel}%`);
+            } else {
+                console.error('❌ PDB table container not found!');
             }
             
             if (levelDisplay) {
                 levelDisplay.textContent = `${pdbZoomLevel}%`;
+            } else {
+                console.error('❌ PDB zoom level display not found!');
             }
+            
+            // Recalculate and update view to show proper number of rows for new zoom level
+            setTimeout(() => {
+                console.log('🔄 Updating PDB grid view after zoom...');
+                updateFastGridDimensions();
+                updateFastGridView();
+            }, 50);
         }
+        
+        // Make zoom functions globally accessible for onclick handlers
+        window.zoomAtomTable = zoomAtomTable;
+        window.zoomPdbTable = zoomPdbTable;
+        
+        // Test function to verify zoom is working
+        window.testZoom = function() {
+            console.log('🧪 Testing zoom functionality...');
+            console.log('Atom zoom buttons:', document.querySelectorAll('button[onclick*="zoomAtomTable"]').length);
+            console.log('PDB zoom buttons:', document.querySelectorAll('button[onclick*="zoomPdbTable"]').length);
+            console.log('Atom container:', !!document.querySelector('.atom-table-container'));
+            console.log('PDB container:', !!document.querySelector('.fast-grid-container'));
+            
+            // Test atom zoom
+            console.log('Testing atom zoom...');
+            if (window.zoomAtomTable) {
+                window.zoomAtomTable('in');
+            } else {
+                console.error('zoomAtomTable not available!');
+            }
+        };
 
         function highlight3DResidueRange(residues) {
             if (!currentModel || !residues || residues.length === 0) {
