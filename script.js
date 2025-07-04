@@ -2750,8 +2750,8 @@
                 atomZoomLevel = Math.max(50, atomZoomLevel - 25);
             }
             
-            const container = document.getElementById('atom-table-viewport');
-            const header = document.querySelector('.atom-table-header');
+            // Apply transform to the parent container to maintain header alignment
+            const container = document.querySelector('.atom-table-container');
             const levelDisplay = document.getElementById('atom-zoom-level');
             
             if (container) {
@@ -2762,15 +2762,6 @@
                 container.offsetHeight; // Trigger reflow
                 container.style.display = '';
                 console.log(`Atom table zoom: ${atomZoomLevel}%`);
-            }
-            
-            if (header) {
-                header.style.transform = `scale(${atomZoomLevel / 100})`;
-                header.style.transformOrigin = 'top left';
-                // Force repaint for header too
-                header.style.display = 'none';
-                header.offsetHeight; // Trigger reflow
-                header.style.display = '';
             }
             
             if (levelDisplay) {
@@ -2785,8 +2776,8 @@
                 pdbZoomLevel = Math.max(50, pdbZoomLevel - 25);
             }
             
-            const container = document.getElementById('fast-grid-viewport');
-            const header = document.querySelector('.fast-grid-header');
+            // Apply transform to the parent container to maintain header alignment
+            const container = document.querySelector('.fast-grid-container');
             const levelDisplay = document.getElementById('pdb-zoom-level');
             
             if (container) {
@@ -2797,15 +2788,6 @@
                 container.offsetHeight; // Trigger reflow
                 container.style.display = '';
                 console.log(`PDB table zoom: ${pdbZoomLevel}%`);
-            }
-            
-            if (header) {
-                header.style.transform = `scale(${pdbZoomLevel / 100})`;
-                header.style.transformOrigin = 'top left';
-                // Force repaint for header too
-                header.style.display = 'none';
-                header.offsetHeight; // Trigger reflow
-                header.style.display = '';
             }
             
             if (levelDisplay) {
