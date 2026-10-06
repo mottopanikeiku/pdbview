@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const path = require('node:path');
 const { PNG } = require('pngjs');
 
-test('bundled protein renders, controls work, and an empty filter clears rows', async ({ page }, testInfo) => {
+test('bundled protein renders on arrival, controls work, and an empty filter clears rows', async ({ page }, testInfo) => {
   const errors = [];
   const failedRequests = [];
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
@@ -10,7 +10,6 @@ test('bundled protein renders, controls work, and an empty filter clears rows', 
   page.on('requestfailed', request => failedRequests.push(`${request.url()}: ${request.failure().errorText}`));
   await page.goto('./');
   await expect(page.locator('#viewer-container canvas')).toBeVisible();
-  await page.locator('#load-example').click();
   await expect(page.locator('#status-display')).toHaveText('1CRN (bundled) loaded successfully');
   await expect(page.locator('#molecular-stats')).toContainText('327');
   expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
@@ -27,6 +26,9 @@ test('bundled protein renders, controls work, and an empty filter clears rows', 
   }
   expect(coloredPixels).toBeGreaterThan(100);
   expect(spectrumPixels).toBeGreaterThan(100);
+  // The explicit example button remains available after automatic loading.
+  await page.locator('#load-example').click();
+  await expect(page.locator('#status-display')).toHaveText('1CRN (bundled) loaded successfully');
 
   await page.selectOption('#style-select', 'stick');
   await page.selectOption('#color-select', 'element');
@@ -56,5 +58,28 @@ test('bundled protein renders, controls work, and an empty filter clears rows', 
   await page.screenshot({ path: screenshot, fullPage: true });
   await testInfo.attach('Protein viewer', { path: screenshot, contentType: 'image/png' });
   expect(failedRequests).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('a PDB URL selects that structure instead of the default example', async ({ page }) => {
+  const errors = [];
+  const requests = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => requests.push(request.url()));
+
+  // Exercise URL selection without depending on the external RCSB API uptime.
+  // The downloaded model is the real bundled PDB; metadata is not tested here.
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', route =>
+    route.fulfill({ contentType: 'application/json', body: '{}' }));
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', path: path.join(__dirname, '../data/1CRN.pdb') }));
+  await page.goto('./?pdb=1crn');
+  await expect(page.locator('#pdb-id')).toHaveValue('1crn');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await expect(page.locator('#molecular-stats')).toContainText('327');
+  await expect(page.locator('#atoms-info')).toContainText('327');
+  expect(requests).toContain('https://files.rcsb.org/download/1CRN.pdb');
+  expect(requests.some(url => url.endsWith('/pdbview/data/1CRN.pdb'))).toBe(false);
   expect(errors).toEqual([]);
 });

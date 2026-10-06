@@ -6,11 +6,11 @@ Live demo: https://mottopanikeiku.github.io/pdbview/
 
 The question: can a small static page make a PDB structure easy to inspect without installing molecular visualization software?
 
-[`index.html`](index.html) and [`styles.css`](styles.css) provide the viewer and controls; [`script.js`](script.js) loads structures, applies representations, and displays atom records and source text. Load the bundled crambin example, upload a local `.pdb` file, or fetch a structure by ID from the [RCSB Protein Data Bank](https://www.rcsb.org/). Drag to rotate, scroll to zoom, and use the style and color menus to change the representation.
+[`index.html`](index.html) and [`styles.css`](styles.css) provide the viewer and controls; [`script.js`](script.js) loads structures, applies representations, and displays atom records and source text. The bundled crambin example loads automatically on arrival. Upload a local `.pdb` file or fetch a structure by ID from the [RCSB Protein Data Bank](https://www.rcsb.org/); a link ending in `?pdb=1BNA` loads that ID instead of the default example. Drag to rotate, scroll to zoom, and use the style and color menus to change the representation.
 
 ## Result
 
-The bundled [1CRN structure](data/1CRN.pdb), downloaded from [RCSB](https://files.rcsb.org/download/1CRN.pdb), contains 327 atom records. The [browser smoke test](tests/smoke.spec.cjs) loads it through the UI under `/pdbview/`, checks the model and non-background rendered pixels, changes style and color, filters the atom table, opens raw PDB text, and uploads the same file. It fails on console errors, uncaught JavaScript exceptions, or failed network requests. This is a functional check, not a rendering-speed benchmark or a scientific validation of the structure.
+The bundled [1CRN structure](data/1CRN.pdb), downloaded from [RCSB](https://files.rcsb.org/download/1CRN.pdb), contains 327 atom records. The [browser smoke test](tests/smoke.spec.cjs) checks it renders on arrival under `/pdbview/` without a click, checks the model and colored rendered pixels, changes style and color, filters the atom table, opens raw PDB text, and uploads the same file. A separate URL-selection test routes RCSB requests to the bundled PDB fixture; it does not test the external API. Tests fail on console errors or uncaught JavaScript exceptions; the unmocked first-visit test also fails on failed network requests. This is a functional check, not a rendering-speed benchmark or a scientific validation of the structure.
 
 ![Bundled crambin in the viewer](docs/assets/pdbview.png)
 
