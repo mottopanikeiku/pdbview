@@ -236,6 +236,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Core functionality first
             initializeViewer();
+            const pdbId = new URLSearchParams(window.location.search).get('pdb')?.trim();
+            if (pdbId) {
+                quickLoad(pdbId);
+            } else {
+                loadBundledExample();
+            }
             
             // Initialize secondary features
             setTimeout(() => {
