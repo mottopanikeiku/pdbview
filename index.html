@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PDBView - Molecular Viewer</title>
     
     <!-- Favicon -->
@@ -10,7 +12,7 @@
     <link rel="preconnect" href="https://files.rcsb.org">
     <link rel="preconnect" href="https://data.rcsb.org">
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="https://3dmol.org">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     
     <!-- External CSS -->
     <link rel="stylesheet" href="styles.css">
@@ -171,6 +173,7 @@
                     <div id="pdb-validation-indicator" class="pdb-validation-indicator"></div>
                     <div id="pdb-error-display" class="pdb-error-display"></div>
                 </div>
+                <button id="load-example" onclick="loadBundledExample()">Load bundled crambin (1CRN)</button>
                 
                 <div class="control-group">
                     <label>Upload File</label>
@@ -250,8 +253,8 @@
     </div>
 
     <!-- Include required libraries with defer for performance -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" defer></script>
-    <script src="https://3dmol.org/build/3Dmol-min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/3dmol@2.5.5/build/3Dmol-min.js" integrity="sha384-OsczYbldvrHgslr9fFp/i4GiLSeuw9l+QIlv99ITw8soOwXcoGeflFMLg+CU/X1d" crossorigin="anonymous" defer></script>
     
     <!-- Main application script -->
     <script src="script.js" defer></script>

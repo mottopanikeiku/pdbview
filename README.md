@@ -1,104 +1,45 @@
-# pdbview - lightweight browser-based pdb viewer
+# pdbview
 
-a lightweight, interactive molecular viewer that runs entirely in your web browser. built with 3dmol.js for high-performance 3d visualization of protein structures.
+PDBView is a browser-based molecular structure viewer built on [3Dmol.js](https://3dmol.org/).
 
-## features
+Live demo: https://mottopanikeiku.github.io/pdbview/
 
-- **load pdb structures** by id from rcsb protein data bank
-- **upload local pdb files** for custom structures
-- **multiple visualization styles**: cartoon, stick, sphere, line, cross
-- **flexible coloring schemes**: spectrum, chain, residue, atom, solid colors
-- **interactive 3d controls**: rotate (drag), zoom (scroll), center view
-- **lightweight**: no installation required, runs in any modern browser
-- **responsive design**: works on desktop and mobile devices
+The question: can a small static page make a PDB structure easy to inspect without installing molecular visualization software?
 
-## getting started
+[`index.html`](index.html) and [`styles.css`](styles.css) provide the viewer and controls; [`script.js`](script.js) loads structures, applies representations, and displays atom records and source text. Load the bundled crambin example, upload a local `.pdb` file, or fetch a structure by ID from the [RCSB Protein Data Bank](https://www.rcsb.org/). Drag to rotate, scroll to zoom, and use the style and color menus to change the representation.
 
-### quick start
-1. open `index.html` in any modern web browser
-2. enter a pdb id (e.g., `1bna`, `1crn`, `2igy`) and click "load from pdb"
-3. or upload your own pdb file using the file selector
-4. interact with the molecule using mouse controls
+## Result
 
-### examples to try
-- `1bna` - dna double helix structure
-- `1crn` - small protein (crambin)
-- `2igy` - antibody structure
-- `1htm` - hiv protease
-- `6vxx` - sars-cov-2 spike protein
+The bundled [1CRN structure](data/1CRN.pdb), downloaded from [RCSB](https://files.rcsb.org/download/1CRN.pdb), contains 327 atom records. The [browser smoke test](tests/smoke.spec.cjs) loads it through the UI under `/pdbview/`, checks the model and non-background rendered pixels, changes style and color, filters the atom table, opens raw PDB text, and uploads the same file. It fails on console errors, uncaught JavaScript exceptions, or failed network requests. This is a functional check, not a rendering-speed benchmark or a scientific validation of the structure.
 
-## usage
+![Bundled crambin in the viewer](docs/assets/pdbview.png)
 
-### loading structures
-- **from pdb database**: enter a 4-character pdb id and click "load from pdb"
-- **from file**: click "choose file" and select a local `.pdb` file
+## Run locally
 
-### visualization controls
-- **style**: choose between cartoon, stick, sphere, line, or cross representations
-- **color**: select from spectrum, chain-based, residue-based, atom-based, or solid colors
-- **navigation**: 
-  - drag to rotate the molecule
-  - scroll to zoom in/out
-  - click "center view" to reset the view
-  - press enter in the pdb id field to load
+Requires Node.js 22 or later and Python 3 for the optional static server. Rendering requires a WebGL-capable browser; the automated test uses Chromium with CPU software rendering. No GPU, account, API key, or paid compute is needed. Internet access is required to download packages and the two pinned, integrity-checked CDN libraries.
 
-### supported file formats
-- pdb format (`.pdb` files)
-- structures from rcsb protein data bank
-
-## technical details
-
-### built with
-- **3dmol.js** - high-performance molecular visualization library
-- **jquery** - dom manipulation and ajax requests
-- **vanilla html/css/javascript** - no build process required
-
-### browser compatibility
-- chrome (recommended)
-- firefox
-- safari
-- edge
-- any modern browser with webgl support
-
-### file structure
-```
-pdbview/
-├── index.html          # main application file
-├── readme.md          # this documentation
-└── license           # mit license
+```sh
+npm ci && npx playwright install --with-deps chromium
+npm test
+python3 -m http.server 8000
 ```
 
-## how it works
+Open `http://localhost:8000/` after the third command. The automated test starts its own server at `http://127.0.0.1:48731/pdbview/`; no separate server is needed for tests. There is no application build step.
 
-1. **pdb parsing**: the application fetches pdb data either from rcsb's servers or reads local files
-2. **3d rendering**: 3dmol.js parses the molecular data and renders it using webgl
-3. **styling**: users can apply different visual representations and color schemes
-4. **interaction**: mouse and keyboard events control camera position and molecular display
+## Limitations
 
-## development
+- Only PDB input is exposed by this UI; local uploads are limited to 50 MB.
+- The bundled example needs no RCSB request, but the viewer still downloads its libraries from CDNs. Database lookup and publication metadata require RCSB access.
+- Large structures may be slow, especially with sphere or stick representations on CPU software rendering.
+- The smoke test covers Chromium, one small protein, and basic controls; other browsers and every interaction are not covered.
+- This is an inspection tool, not a molecular simulation or structure-quality assessment.
 
-this is a client-side only application. to make changes:
+## Deployment and prior work
 
-1. edit `index.html` with any text editor
-2. refresh the browser to see changes
-3. no build process or server required
+[The workflow](.github/workflows/pages.yml) runs the browser smoke test on pull requests. On pushes to `main` or manual runs on `main`, it uploads only the public HTML, CSS, JavaScript, and bundled structure and deploys with GitHub Pages. The owner must select GitHub Actions as the Pages source; the workflow does not change repository settings.
 
-### adding new features
+Rendering and PDB parsing are provided by [3Dmol.js](https://github.com/3dmol/3Dmol.js); DOM helpers use [jQuery](https://jquery.com/). Structure data and optional publication metadata come from [RCSB PDB](https://www.rcsb.org/). The raw-text virtual grid is inspired by [Gabriel Petersson's fast-grid](https://github.com/gabrielpetersson/fast-grid), as noted in `script.js`.
 
-the codebase is designed to be easily extensible:
-- **new visualization styles**: add options to the `style-select` dropdown
-- **custom color schemes**: extend the `color-select` options
-- **additional file formats**: 3dmol.js supports sdf, mol2, xyz, and other formats
-- **analysis tools**: add molecular analysis functions using 3dmol.js apis
+The application is under the [MIT license](LICENSE); upstream libraries and PDB data retain their own licenses and terms.
 
-## contributing
-
-1. fork the repository
-2. make your changes
-3. test in multiple browsers
-4. submit a pull request
-
-## license
-
-this project is licensed under the mit license - see the [license](license) file for details.
-
+Written with AI coding assistance.

@@ -730,7 +730,19 @@
             }
         }, 800); // Wait 800ms after user stops typing
         
-        function loadPDBData(data, pdbId) {
+        async function loadBundledExample() {
+            showMessage('Loading bundled crambin...');
+            try {
+                const response = await fetch('data/1CRN.pdb');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                loadPDBData(await response.text(), null, '1CRN (bundled)');
+            } catch (error) {
+                showPdbError(`Unable to load bundled example: ${error.message}`);
+                showMessage('Bundled example could not be loaded', 'error');
+            }
+        }
+
+        function loadPDBData(data, pdbId, label = pdbId) {
             try {
                 // Cancel any pending renders
                 cancelPendingRender();
@@ -775,12 +787,12 @@
                     
                     // Parse data asynchronously to avoid blocking
                     setTimeout(() => {
-                fetchLiterature(pdbId);
+                if (pdbId) fetchLiterature(pdbId);
                 displayRawPdb(data, pdbId);
                 parseAtomData(data);
                     }, 0);
                 
-                showMessage(`${pdbId} loaded successfully`, 'success');
+                showMessage(`${label} loaded successfully`, 'success');
                     // Clear any previous PDB errors on successful load
                     clearPdbError();
                 });
@@ -887,6 +899,19 @@
         
         const throttledUpdateStyle = PerformanceManager.throttle(updateStyle, 150);
         
+        function molecularStyle(styleType, colorScheme) {
+            if (colorScheme === 'spectrum') {
+                if (styleType === 'cartoon') return { cartoon: { color: 'spectrum' } };
+                const range = $3Dmol.getPropertyRange(currentModel.selectedAtoms({}), 'resi');
+                return { [styleType]: { colorscheme: {
+                    prop: 'resi', gradient: new $3Dmol.Gradient.Sinebow(range[0], range[1])
+                } } };
+            }
+            const schemes = { chain: 'chain', residue: 'amino', element: 'Jmol' };
+            return { [styleType]: schemes[colorScheme]
+                ? { colorscheme: schemes[colorScheme] } : { color: colorScheme } };
+        }
+
         function updateStyle() {
             if (!currentModel) {
                 return;
@@ -907,22 +932,7 @@
             viewer.removeAllShapes();
             viewer.setStyle({}, {});
             
-            // Define style object with proper color handling
-            const styleObj = {};
-            
-            // Handle different color schemes properly for 3DMol.js
-            if (colorScheme === 'spectrum') {
-                styleObj[styleType] = { colorscheme: 'spectrum' };
-            } else if (colorScheme === 'chain') {
-                styleObj[styleType] = { colorscheme: 'chain' };
-            } else if (colorScheme === 'residue') {
-                styleObj[styleType] = { colorscheme: 'residue' };
-            } else if (colorScheme === 'element') {
-                styleObj[styleType] = { colorscheme: 'element' };
-            } else {
-                // For solid colors (white, red, blue, green)
-                styleObj[styleType] = { color: colorScheme };
-            }
+            const styleObj = molecularStyle(styleType, colorScheme);
             
             // Apply the style in a single batch
             viewer.setStyle({}, styleObj);
@@ -2582,8 +2592,12 @@
         }
         
         function updateAtomTableView() {
-            if (!atomTable.viewport || !atomTable.container || atomTable.filteredData.length === 0) {
-                console.log('Atom table view update skipped - missing elements or no data');
+            if (!atomTable.viewport || !atomTable.container) {
+                return;
+            }
+            if (atomTable.filteredData.length === 0) {
+                atomTable.container.replaceChildren();
+                atomTable.container.style.height = '0px';
                 return;
             }
             
@@ -2882,19 +2896,7 @@
             // Clear all styles first
             viewer.setStyle({}, {});
             
-            // Apply base style to all atoms
-            const baseStyleObj = {};
-            if (colorScheme === 'spectrum') {
-                baseStyleObj[styleType] = { colorscheme: 'spectrum' };
-            } else if (colorScheme === 'chain') {
-                baseStyleObj[styleType] = { colorscheme: 'chain' };
-            } else if (colorScheme === 'residue') {
-                baseStyleObj[styleType] = { colorscheme: 'residue' };
-            } else if (colorScheme === 'element') {
-                baseStyleObj[styleType] = { colorscheme: 'element' };
-            } else {
-                baseStyleObj[styleType] = { color: colorScheme };
-            }
+            const baseStyleObj = molecularStyle(styleType, colorScheme);
             
             viewer.setStyle({}, baseStyleObj);
             
