@@ -223,7 +223,17 @@ button:active {
 
 .file-input input[type=file] {
     position: absolute;
-    left: -9999px;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+.file-input:focus-within .file-label {
+    outline: 3px solid #ffdc55;
+    outline-offset: 2px;
 }
 
 .file-label {

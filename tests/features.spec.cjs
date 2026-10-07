@@ -80,6 +80,15 @@ test('sequence, keyboard atom measurement and share links restore real model sta
 test('drag and drop stays local, invalid input preserves the model, and Clear empties it', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
+  // Tab reaches the native chooser; its visible label shows the keyboard focus.
+  await page.locator('#load-example').focus();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#pdb-file')).toBeFocused();
+  await expect(page.locator('.file-label')).toHaveCSS('outline-color', 'rgb(255, 220, 85)');
+  const fileChooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  await (await fileChooser).setFiles(path.join(__dirname, '../data/1CRN.pdb'));
+  await expect(page.locator('#status-display')).toHaveText('1CRN.pdb loaded successfully');
   await dropPdb(page, pdb);
   await expect(page.locator('#status-display')).toHaveText('dropped.pdb loaded successfully');
   expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
