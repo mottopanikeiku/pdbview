@@ -126,7 +126,6 @@
                 const div = document.createElement('div');
                 div.className = 'paper-item';
                 div.style.height = `${this.itemHeight - 12}px`; // Account for margin
-                div.onclick = () => viewPaper(index);
                 
                 const authors = Array.isArray(item.authors) ? 
                     item.authors.slice(0, 3).map(a => a.name || a).join(', ') + 
@@ -135,7 +134,7 @@
                     (item.rcsb_authors && item.rcsb_authors.length > 3 ? ' et al.' : '');
                 
                 div.innerHTML = `
-                    <div class="paper-title">${item.title || 'Untitled'}</div>
+                    <button class="paper-title" onclick="viewPaper(${index})">${item.title || 'Untitled'}</button>
                     <div class="paper-authors">${authors || 'Unknown authors'}</div>
                     <div class="paper-journal">${item.journal || 'Unknown journal'} ${item.year ? `(${item.year})` : ''}</div>
                     <div class="paper-abstract">${item.abstract || 'No abstract available.'}</div>
@@ -164,7 +163,6 @@
         // Enhanced cache instances
         const literatureCache = new CacheManager(600000); // 10 minutes
         const pdbCache = new CacheManager(1800000); // 30 minutes
-        const pdbExistenceCache = new CacheManager(3600000); // 1 hour for existence checks
         
         // Performance monitoring
         class PerformanceMonitor {
@@ -242,9 +240,7 @@
             }
             
             // Initialize secondary features
-            setTimeout(() => {
-                initializeSecondaryFeatures();
-            }, 200);
+            initializeSecondaryFeatures();
             
             // Initialize advanced features last
             setTimeout(() => {
@@ -291,7 +287,7 @@
             
             // Set up periodic cleanup
             setInterval(() => {
-                if (literatureCache.size() > 20 || pdbCache.size() > 10 || pdbExistenceCache.size() > 100) {
+                if (literatureCache.size() > 20 || pdbCache.size() > 10) {
                     MemoryManager.cleanupResources();
                 }
             }, 300000); // Every 5 minutes
@@ -446,7 +442,6 @@
                 // Cache eviction must never unload the structure being inspected.
                 if (literatureCache.size() > 8) literatureCache.clear();
                 if (pdbCache.size() > 3) pdbCache.clear();
-                if (pdbExistenceCache.size() > 50) pdbExistenceCache.clear();
             }
             
             static optimizeImageLoading() {
@@ -551,109 +546,13 @@
             }
         }
         
-        // Fast PDB existence check using RCSB REST API with caching
-        async function checkPDBExists(pdbId) {
-            // Check cache first
-            const cachedResult = pdbExistenceCache.get(pdbId);
-            if (cachedResult) {
-                return cachedResult;
-            }
-            
-            try {
-                // Use RCSB's REST API to quickly check if PDB exists
-                // This endpoint returns basic info (much smaller than full PDB file)
-                const response = await fetch(`https://data.rcsb.org/rest/v1/core/entry/${pdbId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                let result;
-                
-                if (response.status === 404) {
-                    result = {
-                        exists: false,
-                        error: `PDB "${pdbId}" doesn't exist in the database`
-                    };
-                } else if (response.status === 400) {
-                    result = {
-                        exists: false,
-                        error: `Invalid PDB ID format: "${pdbId}"`
-                    };
-                } else if (response.status >= 500) {
-                    result = {
-                        exists: false,
-                        error: `Server error checking "${pdbId}". Try again later`
-                    };
-                } else if (!response.ok) {
-                    result = {
-                        exists: false,
-                        error: `Error checking PDB "${pdbId}" (HTTP ${response.status})`
-                    };
-                } else {
-                    // PDB exists, optionally parse some basic info
-                    const data = await response.json();
-                    result = {
-                        exists: true,
-                        info: {
-                            title: data.struct?.title,
-                            release_date: data.rcsb_accession_info?.initial_release_date
-                        }
-                    };
-                }
-                
-                // Cache the result
-                pdbExistenceCache.set(pdbId, result);
-                return result;
-                
-            } catch (error) {
-                // Network error or other issue
-                console.warn('PDB existence check failed:', error);
-                const result = {
-                    exists: false,
-                    error: `Unable to verify PDB "${pdbId}". Check your connection and try again`
-                };
-                
-                // Don't cache network errors (so we can retry)
-                return result;
-            }
-        }
-        
-        // Debounced real-time PDB validation
-        const debouncedPDBValidation = PerformanceManager.debounce(async (pdbId) => {
-            if (!pdbId || pdbId.length !== 4 || !/^[A-Z0-9]{4}$/.test(pdbId)) {
-                hidePdbValidationIndicator();
-                return; // Don't validate incomplete or invalid format
-            }
-            
-            try {
-                // Show checking indicator
-                showPdbValidationIndicator('Checking PDB...', 'checking');
-                
-                const result = await checkPDBExists(pdbId);
-                
-                // Only update UI if the input still matches what we checked
-                const currentInput = document.getElementById('pdb-id')?.value?.trim()?.toUpperCase();
-                if (currentInput === pdbId) {
-                    if (result.exists) {
-                        showPdbValidationIndicator('PDB exists', 'valid');
-                        // Auto-hide success indicator after 3 seconds
-                        setTimeout(() => hidePdbValidationIndicator(), 3000);
-                    } else {
-                        hidePdbValidationIndicator();
-                        showPdbError(result.error);
-                    }
-                } else {
-                    // Input changed while we were checking, hide indicator
-                    hidePdbValidationIndicator();
-                }
-            } catch (error) {
-                hidePdbValidationIndicator();
-                // Silently fail for real-time validation
-                console.warn('Real-time validation failed:', error);
-            }
-        }, 800); // Wait 800ms after user stops typing
+        // Typing validates syntax locally; loading handles RCSB availability.
+        const debouncedPDBValidation = PerformanceManager.debounce(pdbId => {
+            const currentInput = document.getElementById('pdb-id')?.value?.trim()?.toUpperCase();
+            if (currentInput === pdbId && /^[A-Z0-9]{4}$/.test(pdbId)) {
+                showPdbValidationIndicator('Ready to load', 'valid');
+            } else hidePdbValidationIndicator();
+        }, 300);
         
         let structureRequest = 0;
 
@@ -1333,54 +1232,20 @@
                     return;
                 }
                 
-                // Fetch detailed publication info for each citation
-                const publicationPromises = citations.map(citation => {
-                    if (citation.pdbx_database_id_pubmed) {
-                        return fetchPubMedDetails(citation.pdbx_database_id_pubmed, citation);
-                    }
-                    return Promise.resolve(citation);
-                });
-                
-                const publications = await Promise.all(publicationPromises);
-                if (request !== structureRequest || currentPdbId !== pdbId) return;
-                const filteredPublications = publications.filter(pub => pub !== null);
-                
-                // Cache the results
-                literatureCache.set(pdbId, filteredPublications);
-                
-                displayLiterature(pdbId, filteredPublications);
+                const publications = citations.map(citation => ({
+                    ...citation,
+                    journal: citation.rcsb_journal_abbrev || citation.journal_abbrev,
+                    pubmed_id: citation.pdbx_database_id_PubMed,
+                    doi: citation.pdbx_database_id_DOI
+                }));
+                literatureCache.set(pdbId, publications);
+                displayLiterature(pdbId, publications);
                 
             } catch (error) {
                 if (request === structureRequest && currentPdbId === pdbId) displayNoLiterature(pdbId, 'Failed to fetch publication data');
             }
         }
         
-        async function fetchPubMedDetails(pubmedId, citation) {
-            try {
-                const response = await fetch(`https://data.rcsb.org/rest/v1/core/pubmed/${pubmedId}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                return {
-                    ...citation,
-                    pubmed_id: pubmedId,
-                    title: data.title || citation.title,
-                    authors: data.author || [],
-                    journal: data.journal_abbrev || citation.journal_abbrev,
-                    year: data.year || citation.year,
-                    abstract: data.abstract || null,
-                    doi: data.doi || citation.pdbx_database_id_doi,
-                    pubmed_data: data
-                };
-            } catch (error) {
-                console.warn(`Failed to fetch PubMed details for ${pubmedId}:`, error);
-                return citation;
-            }
-        }
         
         function displayLiterature(pdbId, publications) {
             const infoElement = document.getElementById('literature-info');
@@ -1420,10 +1285,9 @@
                 
                 const paperItem = document.createElement('div');
                 paperItem.className = 'paper-item';
-                paperItem.onclick = () => viewPaper(index);
                 
                 paperItem.innerHTML = `
-                    <div class="paper-title">${pub.title || 'Untitled'}</div>
+                    <button class="paper-title" onclick="viewPaper(${index})">${pub.title || 'Untitled'}</button>
                     <div class="paper-authors">${authors || 'Unknown authors'}</div>
                     <div class="paper-journal">${pub.journal || 'Unknown journal'} ${pub.year ? `(${pub.year})` : ''}</div>
                     <div class="paper-abstract">${pub.abstract || 'No abstract available.'}</div>
@@ -1612,7 +1476,7 @@
                 <div class="fast-grid-container">
                     <div class="pdb-filters">
                         <span style="font-size: 11px; color: #888;">Filter by record type:</span>
-                        <select class="pdb-filter-dropdown" id="pdb-filter-select" onchange="fastGridFilter(this.value)">
+                        <select class="pdb-filter-dropdown" id="pdb-filter-select" aria-label="PDB record type" onchange="fastGridFilter(this.value)">
                             <option value="all">All Records</option>
                             ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
                         </select>
@@ -1630,7 +1494,7 @@
                         <div class="fast-grid-header-cell">Record</div>
                         <div class="fast-grid-header-cell">Content</div>
                     </div>
-                    <div class="fast-grid-viewport" id="fast-grid-viewport">
+                    <div class="fast-grid-viewport" id="fast-grid-viewport" tabindex="0" role="region" aria-label="Scrollable PDB records">
                         <div class="fast-grid-content" id="fast-grid-content"></div>
                     </div>
                 </div>

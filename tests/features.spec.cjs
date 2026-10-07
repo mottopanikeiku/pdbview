@@ -1,0 +1,211 @@
+const { test, expect } = require('@playwright/test');
+const AxeBuilder = require('@axe-core/playwright').default;
+const fs = require('node:fs');
+const path = require('node:path');
+const pdb = fs.readFileSync(path.join(__dirname, '../data/1CRN.pdb'), 'utf8');
+
+function collectErrors(page) {
+  const errors = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', error => errors.push(error.message));
+  return errors;
+}
+
+async function loaded(page) {
+  await page.goto('./');
+  await expect(page.locator('#status-display')).toHaveText('1CRN (bundled) loaded successfully');
+}
+
+async function dropPdb(page, contents, name = 'dropped.pdb') {
+  const transfer = await page.evaluateHandle(({ contents, name }) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([contents], name, { type: 'text/plain' }));
+    return transfer;
+  }, { contents, name });
+  await page.dispatchEvent('#viewer-container', 'drop', { dataTransfer: transfer });
+  await transfer.dispose();
+}
+
+async function axeClean(page) {
+  const result = await new AxeBuilder({ page }).analyze();
+  expect(result.violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => node.target) }))).toEqual([]);
+}
+
+test('sequence, keyboard atom measurement and share links restore real model state', async ({ page }, testInfo) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await expect(page.locator('.sequence-residue')).toHaveCount(46);
+  const residue = page.locator('.sequence-residue').nth(3);
+  await residue.focus();
+  await page.keyboard.press('Space');
+  await expect(residue).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => selectedResidue.resi)).toBe(4);
+  await page.selectOption('#style-select', 'stick');
+  await page.selectOption('#color-select', 'element');
+  await expect(residue).toHaveAttribute('aria-pressed', 'true');
+  await page.selectOption('#measure-first', '0');
+  await page.selectOption('#measure-second', '1');
+  await page.locator('#measure-selected').focus();
+  await page.keyboard.press('Enter');
+  const expected = Math.hypot(17.047 - 16.967, 14.099 - 12.784, 3.625 - 4.338).toFixed(3);
+  await expect(page.locator('#distance-result')).toContainText(`${expected} Å`);
+  await page.selectOption('#color-select', 'chain');
+  expect(await page.evaluate(() => Boolean(measurementShape && measurementLabel))).toBe(true);
+  const canvas = page.locator('#viewer-container');
+  await canvas.focus();
+  const before = await page.evaluate(() => viewer.getView());
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('+');
+  expect(await page.evaluate(() => viewer.getView())).not.toEqual(before);
+  const sharedView = await page.evaluate(() => viewer.getView());
+  await page.locator('#share-view').click();
+  const url = await page.locator('#share-url').inputValue();
+  expect(url).toContain('example=1CRN');
+  await page.goto(url);
+  await expect(page.locator('#status-display')).toHaveText('1CRN (bundled) loaded successfully');
+  await expect(page.locator('#style-select')).toHaveValue('stick');
+  await expect(page.locator('#color-select')).toHaveValue('chain');
+  await expect(page.locator('.sequence-residue').nth(3)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#distance-result')).toContainText(`${expected} Å`);
+  const restored = await page.evaluate(() => viewer.getView());
+  restored.forEach((value, index) => expect(value).toBeCloseTo(sharedView[index], 5));
+  await axeClean(page);
+  const screenshot = process.env.PDBVIEW_FEATURE_SCREENSHOT || testInfo.outputPath('pdbview-features.png');
+  await page.locator('#distance-result').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: screenshot, fullPage: true });
+  await testInfo.attach('Sequence and measured crambin', { path: screenshot, contentType: 'image/png' });
+  expect(errors).toEqual([]);
+});
+
+test('drag and drop stays local, invalid input preserves the model, and Clear empties it', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, pdb);
+  await expect(page.locator('#status-display')).toHaveText('dropped.pdb loaded successfully');
+  expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
+  await page.locator('#share-view').click();
+  await expect(page.locator('#share-url')).toHaveValue('');
+  await expect(page.locator('#share-note')).toContainText('stay on your device');
+  await dropPdb(page, 'not a structure');
+  await expect(page.locator('#pdb-error-display')).toContainText('No atoms found');
+  expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.locator('.sequence-residue')).toHaveCount(0);
+  await expect(page.locator('#distance-result')).toHaveText('No atoms selected');
+  expect(await page.evaluate(() => currentModel)).toBeNull();
+  await axeClean(page);
+  expect(errors).toEqual([]);
+});
+
+// A small PDB-format fixture makes projected atom picking unambiguous and exercises
+// a blank chain, residue zero, and distinct insertion codes rather than protein biology.
+const synthetic = [
+  'ATOM      1  CA  ALA     0       0.000   0.000   0.000  1.00 10.00           C',
+  'ATOM      2  CA  GLY     1A      6.000   0.000   0.000  1.00 10.00           C',
+  'ATOM      3  CA  SER     1B     12.000   0.000   0.000  1.00 10.00           C',
+  'ATOM      4  CA  VAL A   1      18.000   0.000   0.000  1.00 10.00           C',
+  'END'
+].join('\n');
+
+test('canvas picking measures atoms and sequence identity includes blank chains and insertion codes', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, synthetic, 'identities.pdb');
+  await expect(page.locator('#status-display')).toHaveText('identities.pdb loaded successfully');
+  await expect(page.locator('.sequence-residue')).toHaveCount(4);
+  await expect(page.locator('#molecular-stats')).toContainText('4');
+  await page.locator('.sequence-residue').nth(1).click();
+  expect(await page.evaluate(() => currentModel.selectedAtoms(residueSelection(selectedResidue)).length)).toBe(1);
+  expect(await page.evaluate(() => selectedResidue.icode)).toBe('A');
+  await page.selectOption('#style-select', 'sphere');
+  await page.locator('#measure-toggle').click();
+  const positions = await page.evaluate(() => viewer.modelToScreen(currentModel.selectedAtoms({})));
+  for (const position of positions.slice(0, 2)) await page.mouse.click(position.x, position.y);
+  await expect(page.locator('#distance-result')).toContainText('6.000 Å');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#distance-result')).toHaveText('No atoms selected');
+  expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(4);
+  expect(errors).toEqual([]);
+});
+
+test('latest load wins and Clear cancels pending RCSB responses', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  let complete;
+  const waiting = new Promise(resolve => { complete = resolve; });
+  await page.route('https://files.rcsb.org/download/1ABC.pdb', async route => {
+    await waiting;
+    await route.fulfill({ contentType: 'text/plain', body: pdb });
+  });
+  await page.locator('#pdb-id').fill('1ABC');
+  await page.getByRole('button', { name: 'Load from Database' }).click();
+  await expect(page.locator('#status-display')).toContainText('Loading 1ABC');
+  await dropPdb(page, pdb, 'newer.pdb');
+  await expect(page.locator('#status-display')).toHaveText('newer.pdb loaded successfully');
+  complete();
+  await page.waitForResponse('https://files.rcsb.org/download/1ABC.pdb');
+  expect(await page.evaluate(() => currentPdbId)).toBeNull();
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  expect(await page.evaluate(() => currentModel)).toBeNull();
+  expect(errors).toEqual([]);
+});
+
+test('all data tabs and mobile controls have no axe violations', async ({ page }, testInfo) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  for (const tab of ['Atoms', 'Raw PDB', 'Literature', '3D View']) {
+    await page.getByRole('button', { name: tab, exact: true }).click();
+    await axeClean(page);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await axeClean(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  const screenshot = process.env.PDBVIEW_MOBILE_SCREENSHOT || testInfo.outputPath('pdbview-mobile.png');
+  await page.screenshot({ path: screenshot, fullPage: true });
+  await testInfo.attach('Mobile viewer', { path: screenshot, contentType: 'image/png' });
+  expect(errors).toEqual([]);
+});
+
+test('live RCSB entry loads through the database controls', async ({ page }) => {
+  test.skip(process.env.PDBVIEW_LIVE_RCSB !== '1', 'Opt-in network check; deterministic CI uses the bundled RCSB fixture.');
+  const errors = collectErrors(page);
+  await loaded(page);
+  await page.locator('#pdb-id').fill('1crn');
+  await page.locator('#pdb-id').press('Enter');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await expect(page.locator('.sequence-residue')).toHaveCount(46);
+  expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.locator('#literature-info')).not.toHaveText('Loading publications...');
+  await axeClean(page);
+  expect(errors).toEqual([]);
+});
+
+test('RCSB citation links and detail dialogs are keyboard accessible', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', body: pdb }));
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      citation: [{
+        title: 'Water structure of a hydrophobic protein at atomic resolution',
+        pdbx_database_id_PubMed: 16593516,
+        pdbx_database_id_DOI: '10.1073/pnas.81.19.6014',
+        rcsb_authors: ['Teeter, M.M.'], journal_abbrev: 'PNAS', year: 1984
+      }]
+    }) }));
+  await page.goto('./?pdb=1CRN');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
+  const title = page.getByRole('button', { name: 'Water structure of a hydrophobic protein at atomic resolution', exact: true });
+  await title.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#paper-viewer')).toBeVisible();
+  await expect(page.locator('#paper-viewer a').first()).toHaveAttribute('href', 'https://doi.org/10.1073/pnas.81.19.6014');
+  await axeClean(page);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#paper-viewer')).not.toBeVisible();
+  await expect(title).toBeFocused();
+  expect(errors).toEqual([]);
+});
