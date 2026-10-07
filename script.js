@@ -159,9 +159,7 @@
         
         // FASTA and hover functionality
         let proteinSequence = [];
-        let hoveredResidue = null;
         let selectedResidue = null;
-        let hoverTimeout = null;
         
         // Enhanced cache instances
         const literatureCache = new CacheManager(600000); // 10 minutes
@@ -285,8 +283,6 @@
             // Set up keyboard shortcuts
             setupKeyboardShortcuts();
             
-            // Initialize FASTA button state
-            updateFastaButton();
         }
         
         function initializeAdvancedFeatures() {
@@ -309,20 +305,13 @@
                     debouncedLoadPDB();
                 }
                 
-                // Escape to clear
                 if (e.key === 'Escape') {
-                    e.preventDefault();
-                    clearViewer();
+                    closeAminoAcidModal();
+                    closePaperViewer();
+                    resetMeasurement();
                 }
-                
-                // Space to toggle interactive mode
-                if (e.key === ' ' && !e.target.matches('input, select, textarea')) {
-                    e.preventDefault();
-                    toggleInteractiveMode();
-                }
-                
-                // C to center view
-                if (e.key === 'c' && !e.target.matches('input, select, textarea')) {
+                // Do not steal native Space/Enter from buttons and form controls.
+                if (e.key.toLowerCase() === 'c' && e.target.id === 'viewer-container') {
                     e.preventDefault();
                     centerView();
                 }
@@ -454,57 +443,10 @@
         // Enhanced memory management utilities
         class MemoryManager {
             static cleanupResources() {
-                // Cancel any pending renders first
-                cancelPendingRender();
-                
-                if (currentModel) {
-                    viewer.removeAllModels();
-                    viewer.removeAllShapes();
-                    currentModel = null;
-                }
-                
-                // Clear large data structures
-                if (fastGrid.data) {
-                    fastGrid.data.length = 0; // More efficient than reassignment
-                    fastGrid.filteredData.length = 0;
-                }
-                
-                if (atomTable.data) {
-                    atomTable.data.length = 0;
-                    atomTable.filteredData.length = 0;
-                }
-                
-                rawPdbData = null;
-                selectedAtoms.length = 0;
-                
-                // Clear caches more aggressively
-                if (literatureCache.size() > 8) {
-                    literatureCache.clear();
-                }
-                if (pdbCache.size() > 3) {
-                    pdbCache.clear();
-                }
-                if (pdbExistenceCache.size() > 50) { // Keep more existence checks cached
-                    pdbExistenceCache.clear();
-                }
-                
-                // Clear DOM references that might hold memory
-                this.clearDOMReferences();
-                
-                // Force garbage collection hint
-                if (window.gc) {
-                    window.gc();
-                }
-            }
-            
-            static clearDOMReferences() {
-                // Clear any cached DOM elements that might hold references
-                const containers = [fastGrid.container, atomTable.container];
-                containers.forEach(container => {
-                    if (container) {
-                        container.innerHTML = '';
-                    }
-                });
+                // Cache eviction must never unload the structure being inspected.
+                if (literatureCache.size() > 8) literatureCache.clear();
+                if (pdbCache.size() > 3) pdbCache.clear();
+                if (pdbExistenceCache.size() > 50) pdbExistenceCache.clear();
             }
             
             static optimizeImageLoading() {
@@ -533,7 +475,7 @@
                 const allAtoms = model.selectedAtoms({});
                 const atoms = allAtoms.length;
                 const chains = [...new Set(allAtoms.map(atom => atom.chain))].length;
-                const residues = [...new Set(allAtoms.map(atom => atom.resi))].length;
+                const residues = new Set(allAtoms.map(atom => residueKey(atom))).size;
                 
                 stats.innerHTML = `
                     <div class="stat-line"><span>Status:</span><span class="stat-value">Loaded</span></div>
@@ -588,45 +530,22 @@
             // Check cache first
             const cachedData = pdbCache.get(pdbId);
             if (cachedData) {
+                ++structureRequest;
                 loadPDBData(cachedData, pdbId);
                 return;
             }
             
-            showMessage(`Checking ${pdbId}...`);
-            
-            try {
-                // Quick existence check using RCSB REST API (much faster than downloading full file)
-                const existsCheck = await checkPDBExists(pdbId);
-                if (!existsCheck.exists) {
-                    throw new Error(existsCheck.error);
-            }
-            
+            const request = ++structureRequest;
             showMessage(`Loading ${pdbId}...`);
-            
-            // Clear previous model
-            viewer.removeAllModels();
-            
-                // Now fetch the actual PDB data
+            try {
                 const response = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`);
-                
-                if (!response.ok) {
-                    throw new Error(`Failed to download PDB file for "${pdbId}"`);
-                }
-                
+                if (!response.ok) throw new Error(`Unable to download ${pdbId} (HTTP ${response.status})`);
                 const data = await response.text();
-                
-                // Validate that we got actual PDB data
-                if (!data.includes('HEADER') && !data.includes('ATOM') && !data.includes('HETATM')) {
-                    throw new Error(`Invalid PDB data received for "${pdbId}"`);
-                }
-                
-                // Cache the data
+                if (request !== structureRequest) return;
                 pdbCache.set(pdbId, data);
-                
                 loadPDBData(data, pdbId);
-                
             } catch (error) {
-                console.error('PDB loading error:', error);
+                if (request !== structureRequest) return;
                 showPdbError(error.message);
                 showMessage(`Failed to load ${pdbId}`, 'error');
             }
@@ -736,174 +655,92 @@
             }
         }, 800); // Wait 800ms after user stops typing
         
+        let structureRequest = 0;
+
         async function loadBundledExample() {
+            const request = ++structureRequest;
             showMessage('Loading bundled crambin...');
             try {
                 const response = await fetch('data/1CRN.pdb');
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                loadPDBData(await response.text(), null, '1CRN (bundled)');
+                const data = await response.text();
+                if (request === structureRequest) loadPDBData(data, null, '1CRN (bundled)', 'bundled');
             } catch (error) {
+                if (request !== structureRequest) return;
                 showPdbError(`Unable to load bundled example: ${error.message}`);
                 showMessage('Bundled example could not be loaded', 'error');
             }
         }
 
-        function loadPDBData(data, pdbId, label = pdbId) {
+        function loadPDBData(data, pdbId, label = pdbId, source = 'rcsb') {
             try {
-                // Cancel any pending renders
+                // Parse before replacing the current structure; bad input leaves it intact.
+                const candidate = viewer.addModel(data, 'pdb');
+                if (!candidate.selectedAtoms({}).length) {
+                    viewer.removeModel(candidate);
+                    throw new Error('No atoms found in this PDB file');
+                }
                 cancelPendingRender();
-                
-                // Clear previous model and literature
-                viewer.removeAllModels();
+                resetMeasurement();
+                if (currentModel) viewer.removeModel(currentModel);
                 viewer.removeAllShapes();
+                viewer.removeAllLabels();
                 clearLiterature();
                 clearRawPdb();
-                
-                // Clear atom data to prevent duplication
-                atomTable.data.length = 0;
-                atomTable.filteredData.length = 0;
-                
-                // Add the molecular data to the viewer
-                currentModel = viewer.addModel(data, 'pdb');
-                
-                // Check model size for performance warnings
-                const atomCount = currentModel.selectedAtoms({}).length;
-                if (atomCount > 50000) {
-                    showMessage(`Large molecule detected (${atomCount.toLocaleString()} atoms). Performance may be affected.`, 'warning');
-                }
-                
-                // Apply initial styling (batched)
-                requestAnimationFrame(() => {
-                updateStyle();
-                
-                    // Center and render once
-                viewer.zoomTo();
-                
-                    // Store current pdb id and update stats
+                selectedAtoms = [];
+                selectedResidue = null;
+                currentModel = candidate;
                 currentPdbId = pdbId;
+                closeAminoAcidModal();
+                closePaperViewer();
+                document.getElementById('share-url').value = '';
+                document.getElementById('share-note').textContent = '';
+                structureSource = source;
+                updateStyle();
+                viewer.zoomTo();
                 updateMolecularStats(currentModel);
-                    
-                    // Extract and display protein sequence
-                    proteinSequence = extractProteinSequence(currentModel);
-                    displayFastaSequence(proteinSequence);
-                    updateFastaButton();
-                    
-                    // Set up hover handling
-                    setupHoverHandling();
-                    
-                    // Parse data asynchronously to avoid blocking
-                    setTimeout(() => {
-                if (pdbId) fetchLiterature(pdbId);
+                proteinSequence = extractProteinSequence(currentModel);
+                displaySequenceStrip();
+                populateMeasurementAtoms();
                 displayRawPdb(data, pdbId);
                 parseAtomData(data);
-                    }, 0);
-                
+                if (pdbId) fetchLiterature(pdbId);
+                restoreSharedView();
+                configureAtomPicking();
+                viewer.render();
                 showMessage(`${label} loaded successfully`, 'success');
-                    // Clear any previous PDB errors on successful load
-                    clearPdbError();
-                });
-                
+                clearPdbError();
             } catch (error) {
-                console.error('PDB parsing error:', error);
                 showPdbError(`Error parsing PDB data: ${error.message}`);
                 showMessage(`Error parsing PDB data: ${error.message}`, 'error');
             }
         }
-        
+
         function loadPDBFromFile() {
-            const fileInput = document.getElementById('pdb-file');
-            if (!fileInput || !fileInput.files || !fileInput.files[0]) {
-                return;
-            }
-            
-            const file = fileInput.files[0];
-            
-            // Clear any previous PDB errors and indicators
+            const file = document.getElementById('pdb-file')?.files?.[0];
+            if (file) loadLocalFile(file);
+        }
+
+        async function loadLocalFile(file) {
             clearPdbError();
             hidePdbValidationIndicator();
-            
-            // Validate file extension
             if (!file.name.toLowerCase().endsWith('.pdb')) {
                 showPdbError('Please select a PDB file (.pdb extension)');
                 return;
             }
-            
-            // Validate file size (limit to 50MB for performance)
             if (file.size > 50 * 1024 * 1024) {
                 showPdbError('File too large. Please select a file smaller than 50MB');
                 return;
             }
-            
-            showMessage(`Loading ${file.name}...`);
-            
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const data = e.target.result;
-                    
-                    // Validate file content
-                    if (!data || data.trim().length === 0) {
-                        throw new Error('File appears to be empty');
-                    }
-                    
-                    // Check if it looks like a PDB file
-                    if (!data.includes('ATOM') && !data.includes('HETATM') && !data.includes('HEADER')) {
-                        throw new Error('File doesn\'t appear to be a valid PDB format');
-                    }
-                    
-                    // Clear previous model
-                    viewer.removeAllModels();
-                    
-                    // Clear atom data to prevent duplication
-                    atomTable.data = [];
-                    atomTable.filteredData = [];
-                    
-                    // Add the molecular data to the viewer
-                    currentModel = viewer.addModel(data, 'pdb');
-                    
-                    // Apply initial styling
-                    updateStyle();
-                    
-                    // Center and render
-                    viewer.zoomTo();
-                    throttledRender();
-                    
-                    // Extract and display protein sequence
-                    proteinSequence = extractProteinSequence(currentModel);
-                    displayFastaSequence(proteinSequence);
-                    updateFastaButton();
-                    
-                    // Set up hover handling
-                    setupHoverHandling();
-                    
-                    // Clear literature for file uploads (no pdb id)
-                    currentPdbId = null;
-                    clearLiterature();
-                    clearRawPdb();
-                    displayRawPdb(data, null);
-                    
-                    // Parse atom data for atom table
-                    parseAtomData(data);
-                    
-                    updateMolecularStats(currentModel);
-                    showMessage(`${file.name} loaded successfully`, 'success');
-                } catch (error) {
-                    console.error('File parsing error:', error);
-                    showPdbError(`Error parsing file: ${error.message}`);
-                    showMessage(`Error parsing file: ${error.message}`, 'error');
-                }
-            };
-            
-            reader.onerror = function() {
-                showPdbError('Error reading file. Please try again');
-                showMessage('Error reading file', 'error');
-            };
-            
-            reader.readAsText(file);
+            const request = ++structureRequest;
+            try {
+                const data = await file.text();
+                if (request === structureRequest) loadPDBData(data, null, file.name, 'local');
+            } catch (error) {
+                if (request === structureRequest) showPdbError(`Error reading file: ${error.message}`);
+            }
         }
         
-        const throttledUpdateStyle = PerformanceManager.throttle(updateStyle, 150);
         
         function molecularStyle(styleType, colorScheme) {
             if (colorScheme === 'spectrum') {
@@ -935,7 +772,7 @@
             cancelPendingRender(); // Cancel any pending renders
             
             // Clear existing styles efficiently
-            viewer.removeAllShapes();
+            // Measurements own their shapes; style changes must not erase them.
             viewer.setStyle({}, {});
             
             const styleObj = molecularStyle(styleType, colorScheme);
@@ -943,14 +780,8 @@
             // Apply the style in a single batch
             viewer.setStyle({}, styleObj);
             
-            // Re-enable click handling if interactive mode is on (without render)
-            if (interactiveMode) {
-                viewer.setClickable({}, true, function(atom, viewer, event, container) {
-                    if (interactiveMode) {
-                        handleAtomClick(atom);
-                    }
-                });
-            }
+            configureAtomPicking();
+            applyResidueHighlight();
             
             // Single render call at the end
             throttledRender();
@@ -968,11 +799,24 @@
         
         function clearViewer() {
             if (viewer) {
+                ++structureRequest;
+                resetMeasurement();
+                viewer.removeAllShapes();
+                viewer.removeAllLabels();
+                structureSource = null;
+                selectedResidue = null;
+                document.getElementById('sequence-strip').replaceChildren();
+                document.getElementById('measure-first').replaceChildren();
+                document.getElementById('measure-second').replaceChildren();
                 viewer.removeAllModels();
                 throttledRender();
                 currentModel = null;
                 selectedAtoms = [];
                 currentPdbId = null;
+                proteinSequence = [];
+                populateMeasurementAtoms();
+                document.getElementById('share-url').value = '';
+                document.getElementById('share-note').textContent = '';
                 updateMolecularStats(null);
                 closeAminoAcidModal();
                 clearLiterature();
@@ -1010,10 +854,6 @@
                 // Clean up resources
                 MemoryManager.cleanupResources();
                 
-                // Clear FASTA state and update button
-                window.fastaPositionMap = [];
-                window.fastaLargeSequenceMode = false;
-                updateFastaButton();
             }
         }
         
@@ -1046,72 +886,27 @@
         }
         
         function enableClickHandling() {
-            if (!currentModel) return;
-            
-            // Set up click handling for all atoms (no immediate render)
-            viewer.setClickable({}, true, function(atom, viewer, event, container) {
-                if (interactiveMode) {
-                    handleAtomClick(atom);
-                }
-            });
-            
-            // Only render if not already scheduled
+            configureAtomPicking();
             throttledRender();
         }
-        
+
         function disableClickHandling() {
-            if (!currentModel) return;
-            
-            // Clear previous selections efficiently
             clearAtomSelection();
-            
-            // Remove click handlers (no immediate render)
-            viewer.setClickable({}, false);
-            
-            // Single render call
+            configureAtomPicking();
             throttledRender();
         }
         
         function handleAtomClick(atom) {
-            // clear previous selection
-            clearAtomSelection();
-            
-            // highlight the clicked residue
-            const residueSelector = {
-                chain: atom.chain,
-                resi: atom.resi
-            };
-            
-            // add glowing highlight to the residue
-            viewer.addStyle(residueSelector, {
-                stick: {
-                    color: '#ffff00',
-                    radius: 0.4
-                },
-                sphere: {
-                    color: '#ffff00',
-                    radius: 0.6,
-                    alpha: 0.8
-                }
-            });
-            
-            // store selected atoms for later clearing
-            selectedAtoms = currentModel.selectedAtoms(residueSelector);
-            
-            throttledRender();
-            
-            // Show amino acid details in modal
+            selectedAtoms = currentModel.selectedAtoms(residueSelection(atom));
+            selectSequenceResidue({ chain: atom.chain || '', resi: atom.resi, icode: atom.icode || '', resn: atom.resn });
             showAminoAcidDetails(atom);
-            
-            showMessage(`Selected: ${getResidueFullName(atom.resn)} in chain ${atom.chain}`, 'success');
         }
         
         function clearAtomSelection() {
-            if (selectedAtoms.length > 0) {
-                selectedAtoms = [];
-                // Reapply the current style to remove highlights
-                throttledUpdateStyle();
-            }
+            selectedAtoms = [];
+            selectedResidue = null;
+            document.querySelectorAll('.sequence-residue').forEach(button => button.setAttribute('aria-pressed', 'false'));
+            updateStyle();
         }
         
         function showAminoAcidDetails(atom) {
@@ -1173,26 +968,12 @@
                 descriptionElement.textContent = residueData.description;
             }
             
-            // Show modal with fade effect
             const modal = document.getElementById('amino-acid-modal');
-            if (modal) {
-                modal.style.display = 'block';
-                modal.style.opacity = '0';
-                setTimeout(() => {
-                    modal.style.opacity = '1';
-                    modal.style.transition = 'opacity 0.2s ease';
-                }, 10);
-            }
+            if (modal && !modal.open) modal.showModal();
         }
         
         function closeAminoAcidModal() {
-            const modal = document.getElementById('amino-acid-modal');
-            if (modal) {
-                modal.style.opacity = '0';
-                setTimeout(() => {
-                    modal.style.display = 'none';
-                }, 200);
-            }
+            document.getElementById('amino-acid-modal')?.close();
         }
         
         function getAminoAcidData(resn) {
@@ -1393,452 +1174,23 @@
         // FASTA sequence and hover functionality
         function extractProteinSequence(model) {
             if (!model) return [];
-            
-            const sequences = {};
-            const atoms = model.selectedAtoms({});
-            
-            // Group atoms by chain and residue
-            atoms.forEach(atom => {
-                if (!atom.chain || !atom.resn || !atom.resi) return;
-                
-                // Only include standard amino acids
-                const standardAA = ['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE',
-                                  'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER',
-                                  'THR', 'VAL', 'TRP', 'TYR'];
-                
-                if (!standardAA.includes(atom.resn)) return;
-                
-                const chainId = atom.chain;
-                const resId = atom.resi;
-                const resName = atom.resn;
-                
-                if (!sequences[chainId]) {
-                    sequences[chainId] = {};
-                }
-                
-                if (!sequences[chainId][resId]) {
-                    sequences[chainId][resId] = {
-                        resn: resName,
-                        resi: resId,
-                        chain: chainId
-                    };
-                }
-            });
-            
-            // Convert to sorted array
-            const result = [];
-            Object.keys(sequences).sort().forEach(chain => {
-                const residues = Object.keys(sequences[chain])
-                    .map(Number)
-                    .sort((a, b) => a - b)
-                    .map(resId => sequences[chain][resId]);
-                
-                if (residues.length > 0) {
-                    result.push({
-                        chain: chain,
-                        residues: residues
-                    });
-                }
-            });
-            
-            return result;
+            const standardAA = new Set(['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE',
+                'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']);
+            const chains = new Map();
+            for (const atom of model.selectedAtoms({})) {
+                if (!standardAA.has(atom.resn) || atom.resi == null || atom.hetflag) continue;
+                const chain = atom.chain || '';
+                const icode = atom.icode || '';
+                if (!chains.has(chain)) chains.set(chain, new Map());
+                const residues = chains.get(chain);
+                const key = `${atom.resi}:${icode}`;
+                if (!residues.has(key)) residues.set(key, { chain, resi: atom.resi, icode, resn: atom.resn });
+            }
+            return [...chains].map(([chain, residues]) => ({
+                chain, residues: [...residues.values()]
+            }));
         }
         
-        function displayFastaSequence(sequence) {
-            if (!sequence || sequence.length === 0) {
-                return;
-            }
-            
-            // Create a flat mapping of position to residue data
-            window.fastaPositionMap = [];
-            let totalResidues = 0;
-            
-            // First pass: build position map (lightweight)
-            sequence.forEach((chainData, chainIndex) => {
-                chainData.residues.forEach((residue, index) => {
-                    if (!residue.chain || !residue.resi || !residue.resn) return;
-                    
-                    window.fastaPositionMap.push({
-                        chain: residue.chain,
-                        resi: residue.resi,
-                        resn: residue.resn,
-                        globalPos: totalResidues,
-                        chainPos: index,
-                        chainIndex: chainIndex
-                    });
-                    totalResidues++;
-                });
-            });
-            
-            if (totalResidues === 0) {
-                return;
-            }
-            
-            const fastaDisplay = document.getElementById('fasta-sequence-display');
-            const fastaSlider = document.getElementById('fasta-slider');
-            const fastaPosition = document.getElementById('fasta-position');
-            const windowSize = document.getElementById('fasta-window-size');
-            
-            // Safe threshold for DOM rendering (much lower to prevent crashes)
-            const SAFE_DISPLAY_LIMIT = 1500;
-            
-            if (fastaDisplay) {
-                if (totalResidues > SAFE_DISPLAY_LIMIT) {
-                    // For large sequences: show summary and navigation-only mode
-                    fastaDisplay.innerHTML = `
-                        <div style="color: #888; text-align: center; padding: 20px; line-height: 1.6;">
-                            <div style="color: #fff; font-size: 14px; margin-bottom: 8px;">
-                                <strong>Large Protein Sequence</strong>
-                            </div>
-                            <div style="font-size: 12px; margin-bottom: 12px;">
-                                ${totalResidues} residues across ${sequence.length} chain${sequence.length > 1 ? 's' : ''}
-                            </div>
-                            <div style="font-size: 11px; color: #666;">
-                                Use the slider below to navigate and highlight specific regions in the 3D structure.
-                                <br>Large sequences are not displayed to prevent browser crashes.
-                            </div>
-                        </div>
-                    `;
-                    window.fastaLargeSequenceMode = true;
-                } else {
-                    // For smaller sequences: build and display full sequence
-                    let html = '';
-                    sequence.forEach((chainData, chainIndex) => {
-                        if (chainIndex > 0) {
-                            html += '<span class="chain-separator">|</span>';
-                        }
-                        chainData.residues.forEach((residue, index) => {
-                            if (!residue.chain || !residue.resi || !residue.resn) return;
-                            const globalPos = window.fastaPositionMap.findIndex(r => 
-                                r.chain === residue.chain && r.resi === residue.resi && r.chainIndex === chainIndex
-                            );
-                            if (globalPos >= 0) {
-                                html += `<span class="fasta-residue" data-pos="${globalPos}" id="residue-${globalPos}">${residue.resn}</span>`;
-                            }
-                        });
-                    });
-                    fastaDisplay.innerHTML = html;
-                    window.fastaLargeSequenceMode = false;
-                }
-            }
-            
-            // Set up navigation controls
-            if (fastaSlider) {
-                fastaSlider.min = 0;
-                fastaSlider.max = Math.max(0, totalResidues - 1);
-                fastaSlider.value = 0;
-                
-                // Remove old listeners to prevent memory leaks
-                fastaSlider.removeEventListener('input', handleFastaNavigation);
-                fastaSlider.addEventListener('input', handleFastaNavigation);
-            }
-            
-            if (windowSize) {
-                const maxWindow = Math.min(50, Math.floor(totalResidues / 10));
-                windowSize.max = Math.max(1, maxWindow);
-                windowSize.value = Math.min(10, maxWindow);
-                
-                windowSize.removeEventListener('input', handleFastaNavigation);
-                windowSize.addEventListener('input', handleFastaNavigation);
-            }
-            
-            if (fastaPosition) {
-                fastaPosition.textContent = `1 / ${totalResidues}`;
-            }
-            
-            // Show helpful message for large sequences
-            if (totalResidues > SAFE_DISPLAY_LIMIT) {
-                showMessage(`Large protein sequence loaded (${totalResidues} residues). Use slider to navigate.`, 'info');
-            }
-            
-            // Update button text
-            updateFastaButton();
-        }
-        
-        // Toggle FASTA viewer visibility
-        function toggleFastaViewer() {
-            const fastaViewer = document.getElementById('fasta-viewer');
-            const toggleButton = document.querySelector('button[onclick="toggleFastaViewer()"]');
-            
-            if (!fastaViewer || !toggleButton) return;
-            
-            if (fastaViewer.style.display === 'none' || !fastaViewer.style.display) {
-                fastaViewer.style.display = 'block';
-                toggleButton.textContent = 'Hide Sequence';
-            } else {
-                fastaViewer.style.display = 'none';
-                toggleButton.textContent = 'Show Sequence';
-            }
-        }
-        
-        // Handle FASTA navigation
-        function handleFastaNavigation() {
-            const fastaSlider = document.getElementById('fasta-slider');
-            const fastaPosition = document.getElementById('fasta-position');
-            const windowSize = document.getElementById('fasta-window-size');
-            const fastaDisplay = document.getElementById('fasta-sequence-display');
-            
-            if (!fastaSlider || !fastaPosition || !window.fastaPositionMap) return;
-            
-            const currentPos = parseInt(fastaSlider.value);
-            const totalResidues = window.fastaPositionMap.length;
-            const winSize = windowSize ? parseInt(windowSize.value) : 10;
-            
-            // Update position display
-            fastaPosition.textContent = `${currentPos + 1} / ${totalResidues}`;
-            
-            // Highlight current residue range in 3D if window size is being used
-            if (winSize > 1) {
-                highlightFastaWindow(currentPos, winSize);
-            } else {
-                highlightSingleResidue(currentPos);
-            }
-            
-            // Only try to scroll if we're not in large sequence mode
-            if (!window.fastaLargeSequenceMode && fastaDisplay) {
-                const residueElement = document.getElementById(`residue-${currentPos}`);
-                if (residueElement) {
-                    residueElement.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'center',
-                        inline: 'center'
-                    });
-                }
-            }
-        }
-        
-        // Highlight window of residues
-        function highlightFastaWindow(startPos, windowSize) {
-            if (!window.fastaPositionMap) return;
-            
-            // Clear previous highlights
-            clearFastaHighlights();
-            
-            const endPos = Math.min(startPos + windowSize - 1, window.fastaPositionMap.length - 1);
-            const windowResidues = [];
-            
-            for (let i = startPos; i <= endPos; i++) {
-                const residue = window.fastaPositionMap[i];
-                if (residue) {
-                    windowResidues.push(residue);
-                    
-                    // Only highlight in FASTA if not in large sequence mode
-                    if (!window.fastaLargeSequenceMode) {
-                        const residueElement = document.getElementById(`residue-${i}`);
-                        if (residueElement) {
-                            residueElement.classList.add('highlighted');
-                        }
-                    }
-                }
-            }
-            
-            // Always highlight in 3D (this is the main purpose for large sequences)
-            highlight3DResidueRange(windowResidues);
-        }
-        
-        // Highlight single residue
-        function highlightSingleResidue(pos) {
-            if (!window.fastaPositionMap || pos >= window.fastaPositionMap.length) return;
-            
-            clearFastaHighlights();
-            
-            const residue = window.fastaPositionMap[pos];
-            if (residue) {
-                // Only highlight in FASTA if not in large sequence mode
-                if (!window.fastaLargeSequenceMode) {
-                    const residueElement = document.getElementById(`residue-${pos}`);
-                    if (residueElement) {
-                        residueElement.classList.add('highlighted');
-                    }
-                }
-                
-                // Always highlight in 3D
-                highlight3DResidueRange([residue]);
-            }
-        }
-        
-        // Update button text based on whether sequence is available
-        function updateFastaButton() {
-            const toggleButton = document.querySelector('button[onclick="toggleFastaViewer()"]');
-            const fastaViewer = document.getElementById('fasta-viewer');
-            
-            if (!toggleButton) return;
-            
-            if (!window.fastaPositionMap || window.fastaPositionMap.length === 0) {
-                toggleButton.textContent = 'No Sequence';
-                toggleButton.disabled = true;
-                if (fastaViewer) fastaViewer.style.display = 'none';
-            } else {
-                toggleButton.disabled = false;
-                const isVisible = fastaViewer && fastaViewer.style.display !== 'none';
-                toggleButton.textContent = isVisible ? 'Hide Sequence' : 'Show Sequence';
-            }
-        }
-        
-        function updatePositionDisplay() {
-            const positionSlider = document.getElementById('position-slider');
-            const windowSizeInput = document.getElementById('window-size');
-            const positionDisplay = document.getElementById('position-display');
-            
-            if (!positionSlider || !windowSizeInput || !positionDisplay) return;
-            
-            const startPos = parseInt(positionSlider.value);
-            const windowSize = parseInt(windowSizeInput.value);
-            const endPos = startPos + windowSize - 1;
-            
-            positionDisplay.textContent = `${startPos + 1}-${endPos + 1}`;
-        }
-        
-        function highlightCurrentWindow() {
-            const positionSlider = document.getElementById('position-slider');
-            const windowSizeInput = document.getElementById('window-size');
-            
-            if (!positionSlider || !windowSizeInput || !window.fastaPositionMap) return;
-            
-            const startPos = parseInt(positionSlider.value);
-            const windowSize = parseInt(windowSizeInput.value);
-            const endPos = Math.min(startPos + windowSize - 1, window.fastaPositionMap.length - 1);
-            
-            // Clear previous highlights
-            clearFastaHighlights();
-            
-            // Get residues in current window
-            const windowResidues = [];
-            for (let i = startPos; i <= endPos; i++) {
-                const residue = window.fastaPositionMap[i];
-                if (residue) {
-                    windowResidues.push(residue);
-                    
-                    // Highlight in FASTA
-                    const residueElement = document.getElementById(`residue-${i}`);
-                    if (residueElement) {
-                        residueElement.classList.add('highlighted');
-                    }
-                }
-            }
-            
-            // Highlight in 3D
-            highlight3DResidueRange(windowResidues);
-            
-            // Auto-scroll FASTA to show highlighted region
-            scrollToHighlightedRegion(startPos, endPos);
-        }
-        
-        function scrollToHighlightedRegion(startPos, endPos) {
-            const fastaSequence = document.getElementById('fasta-sequence');
-            const firstHighlighted = document.getElementById(`residue-${startPos}`);
-            
-            if (!fastaSequence || !firstHighlighted) return;
-            
-            // Calculate scroll position to center the highlighted region
-            const containerWidth = fastaSequence.clientWidth;
-            const elementLeft = firstHighlighted.offsetLeft;
-            const scrollPos = elementLeft - containerWidth / 2;
-            
-            fastaSequence.scrollTo({
-                left: Math.max(0, scrollPos),
-                behavior: 'smooth'
-            });
-        }
-        
-        function clearFastaHighlights() {
-            // Only clear highlights if not in large sequence mode (no DOM elements to clear)
-            if (!window.fastaLargeSequenceMode) {
-                try {
-                    document.querySelectorAll('.fasta-residue.highlighted').forEach(el => {
-                        el.classList.remove('highlighted');
-                    });
-                } catch (error) {
-                    console.warn('Error clearing FASTA highlights:', error);
-                }
-            }
-        }
-        
-        function clearFastaSelection() {
-            try {
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                clearFastaHighlights();
-                
-                const selectionInfo = document.getElementById('selection-info');
-                if (selectionInfo) selectionInfo.classList.remove('show');
-                
-                selectedResidue = null;
-            } catch (error) {
-                console.warn('Error clearing FASTA selection:', error);
-            }
-        }
-        
-        function highlight3DResidue(residue) {
-            if (!currentModel) return;
-            
-            // Clear previous hover styles only
-            currentModel.removeStyle({}, {stick: true, sphere: true});
-            
-            // Reapply base style
-            updateStyle();
-            
-            // Add hover highlight
-            const residueSelector = {
-                chain: residue.chain,
-                resi: residue.resi
-            };
-            
-            viewer.addStyle(residueSelector, {
-                stick: {
-                    color: '#4a9eff',
-                    radius: 0.35,
-                    alpha: 0.9
-                },
-                sphere: {
-                    color: '#4a9eff',
-                    radius: 0.6,
-                    alpha: 0.7
-                }
-            });
-            
-            throttledRender();
-        }
-        
-        function clear3DHighlight() {
-            if (!currentModel) return;
-            
-            // Clear all styles and reapply original
-            currentModel.removeStyle({}, {stick: true, sphere: true});
-            
-            // Reapply the current style without hover effects
-            updateStyle();
-            
-            // Re-add selection highlight if there's a selected residue
-            if (selectedAtoms.length > 0) {
-                const firstAtom = selectedAtoms[0];
-                const residueSelector = {
-                    chain: firstAtom.chain,
-                    resi: firstAtom.resi
-                };
-                
-                viewer.addStyle(residueSelector, {
-                    stick: {
-                        color: '#ffff00',
-                        radius: 0.4
-                    },
-                    sphere: {
-                        color: '#ffff00',
-                        radius: 0.6,
-                        alpha: 0.8
-                    }
-                });
-            }
-            
-            throttledRender();
-        }
-        
-        // Remove old hover handling - now using text selection
-        function setupHoverHandling() {
-            // Hover handling is no longer needed with text selection approach
-            // This function is kept for compatibility but does nothing
-            return;
-        }
         
         // File input handling (optimized)
         function setupFileInputHandler() {
@@ -1948,6 +1300,7 @@
         }
         
         async function fetchLiterature(pdbId) {
+            const request = structureRequest;
             // Check cache first
             const cachedData = literatureCache.get(pdbId);
             if (cachedData) {
@@ -1972,6 +1325,7 @@
                 }
                 
                 const data = await response.json();
+                if (request !== structureRequest || currentPdbId !== pdbId) return;
                 const citations = data.citation || [];
                 
                 if (citations.length === 0) {
@@ -1988,6 +1342,7 @@
                 });
                 
                 const publications = await Promise.all(publicationPromises);
+                if (request !== structureRequest || currentPdbId !== pdbId) return;
                 const filteredPublications = publications.filter(pub => pub !== null);
                 
                 // Cache the results
@@ -1996,8 +1351,7 @@
                 displayLiterature(pdbId, filteredPublications);
                 
             } catch (error) {
-                console.error('Literature fetch error:', error);
-                displayNoLiterature(pdbId, 'Failed to fetch publication data');
+                if (request === structureRequest && currentPdbId === pdbId) displayNoLiterature(pdbId, 'Failed to fetch publication data');
             }
         }
         
@@ -2185,25 +1539,11 @@
                 bodyElement.innerHTML = content;
             }
             
-            // Show with fade effect
-            if (viewerElement) {
-                viewerElement.style.display = 'block';
-                viewerElement.style.opacity = '0';
-                setTimeout(() => {
-                    viewerElement.style.opacity = '1';
-                    viewerElement.style.transition = 'opacity 0.2s ease';
-                }, 10);
-            }
+            if (viewerElement && !viewerElement.open) viewerElement.showModal();
         }
         
         function closePaperViewer() {
-            const viewerElement = document.getElementById('paper-viewer');
-            if (viewerElement) {
-                viewerElement.style.opacity = '0';
-                setTimeout(() => {
-                    viewerElement.style.display = 'none';
-                }, 200);
-            }
+            document.getElementById('paper-viewer')?.close();
         }
 
         // raw pdb functions
@@ -2520,7 +1860,7 @@
             atomTable.viewport = viewport;
             
             // Clear any existing scroll listeners
-            viewport.onscroll = null;
+            if (atomTable.scrollHandler) viewport.removeEventListener('scroll', atomTable.scrollHandler);
             
             // Ensure viewport has proper styling for scrolling
             viewport.style.overflow = 'auto';
@@ -2862,84 +2202,3 @@
         window.zoomAtomTable = zoomAtomTable;
         window.zoomPdbTable = zoomPdbTable;
         
-        // Test function to verify zoom is working
-        window.testZoom = function() {
-            console.log('🧪 Testing zoom functionality...');
-            console.log('Atom zoom buttons:', document.querySelectorAll('button[onclick*="zoomAtomTable"]').length);
-            console.log('PDB zoom buttons:', document.querySelectorAll('button[onclick*="zoomPdbTable"]').length);
-            console.log('Atom container:', !!document.querySelector('.atom-table-container'));
-            console.log('PDB container:', !!document.querySelector('.fast-grid-container'));
-            
-            // Test atom zoom
-            console.log('Testing atom zoom...');
-            if (window.zoomAtomTable) {
-                window.zoomAtomTable('in');
-            } else {
-                console.error('zoomAtomTable not available!');
-            }
-        };
-
-        function highlight3DResidueRange(residues) {
-            if (!currentModel || !residues || residues.length === 0) {
-                console.log('Cannot highlight: missing model or residues');
-                return;
-            }
-            
-            console.log('Highlighting residues:', residues.length);
-            
-            // Get current style settings
-            const styleSelect = document.getElementById('style-select');
-            const colorSelect = document.getElementById('color-select');
-            
-            if (!styleSelect || !colorSelect) {
-                console.log('Style selectors not found');
-                return;
-            }
-            
-            const styleType = styleSelect.value;
-            const colorScheme = colorSelect.value;
-            
-            // Clear all styles first
-            viewer.setStyle({}, {});
-            
-            const baseStyleObj = molecularStyle(styleType, colorScheme);
-            
-            viewer.setStyle({}, baseStyleObj);
-            
-            // Apply highlight style to selected residues
-            residues.forEach((residue, index) => {
-                const residueSelector = {
-                    chain: residue.chain,
-                    resi: residue.resi
-                };
-                
-                console.log(`Highlighting residue ${index + 1}:`, residueSelector);
-                
-                // Add blue highlight on top of base style
-                viewer.addStyle(residueSelector, {
-                    stick: {
-                        color: '#4a9eff',
-                        radius: 0.35,
-                        alpha: 0.9
-                    },
-                    sphere: {
-                        color: '#4a9eff',
-                        radius: 0.6,
-                        alpha: 0.7
-                    }
-                });
-            });
-            
-            // Re-enable click handling if interactive mode is on
-            if (interactiveMode) {
-                viewer.setClickable({}, true, function(atom, viewer, event, container) {
-                    if (interactiveMode) {
-                        handleAtomClick(atom);
-                    }
-                });
-            }
-            
-            throttledRender();
-        }
-
-

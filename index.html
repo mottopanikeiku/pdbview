@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <main class="container">
         <div class="viewer-section">
             <div class="header">
                 <h1>PDBView</h1>
@@ -36,13 +36,18 @@
                 <div class="tab-content">
                     <!-- 3D View Tab -->
                     <div id="3d-view-panel" class="tab-panel active">
-                        <div id="viewer-container"></div>
+                        <div id="viewer-container" tabindex="0" role="img" aria-label="Molecular structure. Arrow keys rotate; plus and minus zoom; C centers."></div>
+                        <section id="sequence-panel" aria-label="Protein sequence">
+                            <h2>Sequence</h2>
+                            <p>Choose a residue to highlight it. This is the observed structure, not missing residues.</p>
+                            <div id="sequence-strip"></div>
+                        </section>
                         
                         <!-- amino acid detail modal -->
-                        <div id="amino-acid-modal" class="amino-acid-modal">
+                        <dialog id="amino-acid-modal" class="amino-acid-modal" aria-labelledby="modal-title">
                             <div class="modal-header">
                                 <div class="modal-title" id="modal-title">Amino Acid Details</div>
-                                <button class="modal-close" onclick="closeAminoAcidModal()">&times;</button>
+                                <button class="modal-close" onclick="closeAminoAcidModal()" aria-label="Close amino acid details">&times;</button>
                             </div>
                             
                             <div class="amino-acid-structure" id="amino-acid-structure">
@@ -56,7 +61,7 @@
                             <div class="amino-acid-description" id="amino-acid-description">
                                 <!-- amino acid description will be populated here -->
                             </div>
-                        </div>
+                        </dialog>
                     </div>
                     
                     <!-- Literature Tab -->
@@ -101,7 +106,7 @@
                             <div class="atom-controls">
                                 <div class="atom-filter-group">
                                     <span class="atom-filter-label">Type:</span>
-                                    <select class="atom-filter-select" id="atom-type-filter" onchange="filterAtomTable()">
+                                    <select class="atom-filter-select" id="atom-type-filter" aria-label="Atom record type" onchange="filterAtomTable()">
                                         <option value="all">All Atoms</option>
                                         <option value="ATOM">ATOM only</option>
                                         <option value="HETATM">HETATM only</option>
@@ -109,13 +114,13 @@
                                 </div>
                                 <div class="atom-filter-group">
                                     <span class="atom-filter-label">Chain:</span>
-                                    <select class="atom-filter-select" id="atom-chain-filter" onchange="filterAtomTable()">
+                                    <select class="atom-filter-select" id="atom-chain-filter" aria-label="Atom chain" onchange="filterAtomTable()">
                                         <option value="all">All Chains</option>
                                     </select>
                                 </div>
                                 <div class="atom-filter-group">
                                     <span class="atom-filter-label">Element:</span>
-                                    <select class="atom-filter-select" id="atom-element-filter" onchange="filterAtomTable()">
+                                    <select class="atom-filter-select" id="atom-element-filter" aria-label="Atom element" onchange="filterAtomTable()">
                                         <option value="all">All Elements</option>
                                     </select>
                                 </div>
@@ -158,14 +163,14 @@
                 </div>
             </div>
             
-            <div id="status-display" class="status-display">
+            <div id="status-display" class="status-display" role="status">
                 Ready to load molecular structure...
             </div>
         </div>
         
         <div class="controls-section">
             <div class="control-panel">
-                <h3>Load Structure</h3>
+                <h2>Load Structure</h2>
                 <div class="control-group">
                     <label for="pdb-id">PDB ID</label>
                     <input type="text" id="pdb-id" placeholder="e.g., 1BNA" value="">
@@ -176,7 +181,7 @@
                 <button id="load-example" onclick="loadBundledExample()">Load bundled crambin (1CRN)</button>
                 
                 <div class="control-group">
-                    <label>Upload File</label>
+                    <label for="pdb-file">Upload or drop a PDB file</label>
                     <div class="file-input">
                         <input type="file" id="pdb-file" accept=".pdb" onchange="loadPDBFromFile()">
                         <label for="pdb-file" class="file-label">Choose PDB File</label>
@@ -192,7 +197,7 @@
             </div>
             
             <div class="control-panel">
-                <h3>Visualization</h3>
+                <h2>Visualization</h2>
                 <div class="control-group">
                     <label for="style-select">Style</label>
                     <select id="style-select" onchange="updateStyle()">
@@ -220,15 +225,30 @@
             </div>
             
             <div class="control-panel">
-                <h3>View Controls</h3>
+                <h2>View Controls</h2>
                 <button onclick="centerView()">Center View</button>
                 <button onclick="clearViewer()">Clear</button>
                 <button onclick="toggleFullscreen()">Fullscreen</button>
                 <button id="interactive-btn" onclick="toggleInteractiveMode()">Interactive Mode: OFF</button>
+                <button id="share-view" onclick="shareView()">Share view</button>
+                <label for="share-url">Shareable URL (local files are not uploaded)</label>
+                <input id="share-url" type="text" readonly>
+                <p id="share-note"></p>
             </div>
             
             <div class="control-panel">
-                <h3>Structure Info</h3>
+                <h2>Measure distance</h2>
+                <button id="measure-toggle" aria-pressed="false" onclick="toggleMeasurement()">Pick two atoms</button>
+                <button onclick="resetMeasurement()">Clear measurement</button>
+                <label for="measure-first">First atom</label>
+                <select id="measure-first"></select>
+                <label for="measure-second">Second atom</label>
+                <select id="measure-second"></select>
+                <button id="measure-selected" onclick="measureSelectedAtoms()">Measure selected atoms</button>
+                <output id="distance-result" role="status">No atoms selected</output>
+            </div>
+            <div class="control-panel">
+                <h2>Structure Info</h2>
                 <div id="molecular-stats" class="molecular-stats">
                     <div class="stat-line"><span>Status:</span><span class="stat-value">Standby</span></div>
                     <div class="stat-line"><span>Atoms:</span><span class="stat-value">--</span></div>
@@ -237,20 +257,20 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- paper viewer modal -->
-    <div id="paper-viewer" class="paper-viewer">
+    <dialog id="paper-viewer" class="paper-viewer" aria-labelledby="paper-viewer-title">
         <div class="paper-viewer-content">
             <div class="paper-viewer-header">
                 <div class="paper-viewer-title" id="paper-viewer-title">Paper Details</div>
-                <button class="paper-viewer-close" onclick="closePaperViewer()">&times;</button>
+                <button class="paper-viewer-close" onclick="closePaperViewer()" aria-label="Close paper details">&times;</button>
             </div>
             <div class="paper-viewer-body" id="paper-viewer-body">
                 <!-- paper content will be loaded here -->
             </div>
         </div>
-    </div>
+    </dialog>
 
     <!-- Include required libraries with defer for performance -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous" defer></script>
@@ -258,5 +278,6 @@
     
     <!-- Main application script -->
     <script src="script.js" defer></script>
+    <script src="interactions.js" defer></script>
 </body>
 </html> 

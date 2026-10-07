@@ -5,6 +5,7 @@
     "test": "playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@playwright/test": "1.63.0",
     "pngjs": "7.0.0"
   }
