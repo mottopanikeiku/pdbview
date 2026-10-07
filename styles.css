@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
 * {
     box-sizing: border-box;
@@ -141,7 +140,7 @@ body {
     position: relative;
     margin-bottom: 16px;
     height: 100%;
-    min-height: 500px;
+    min-height: 280px;
 }
 
 .control-panel {
@@ -152,7 +151,7 @@ body {
     margin-bottom: 12px;
 }
 
-.control-panel h3 {
+.control-panel h2 {
     margin: 0 0 12px 0;
     font-size: 13px;
     color: #cccccc;
@@ -224,7 +223,17 @@ button:active {
 
 .file-input input[type=file] {
     position: absolute;
-    left: -9999px;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+.file-input:focus-within .file-label {
+    outline: 3px solid #ffdc55;
+    outline-offset: 2px;
 }
 
 .file-label {
@@ -1231,3 +1240,30 @@ button:active {
 .paper-viewer-body a:hover {
     text-decoration: underline;
 } 
+
+/* Keep all controls visible on short screens and narrow phones. */
+.tab-container, .tab-content { min-height: 0; }
+.viewer-section { min-width: 0; }
+.control-panel p, #sequence-panel p { font-size: 12px; color: #bcbcbc; line-height: 1.5; }
+#sequence-panel { flex: 0 0 auto; max-height: 190px; overflow: auto; border: 1px solid #555; border-radius: 6px; padding: 10px; }
+#sequence-panel h2 { font-size: 14px; margin: 0; }
+.sequence-chain { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sequence-chain > span { font-size: 12px; }
+button.sequence-residue { width: auto; min-width: 44px; min-height: 36px; padding: 5px; margin: 0; font-family: monospace; }
+button.sequence-residue[aria-pressed="true"] { color: #111; background: #ffdc55; }
+:focus-visible { outline: 3px solid #ffdc55 !important; outline-offset: 2px; }
+#distance-result { display: block; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; margin-top: 8px; }
+.file-dragging .container { outline: 4px dashed #ffdc55; outline-offset: -5px; }
+.header .subtitle, .stat-line, .atom-filter-label, .zoom-level { color: #bcbcbc; }
+.controls-section { scrollbar-gutter: stable; }
+@media (max-width: 760px), (max-height: 650px) {
+    body { overflow: auto; height: auto; }
+    .container { height: auto; min-height: 100vh; flex-direction: column; }
+    .viewer-section { min-height: 650px; }
+    #viewer-container { height: 350px; flex: 0 0 350px; }
+    .controls-section { width: 100%; overflow: visible; border-left: 0; }
+    .tab-button { padding: 12px; }
+}
+dialog[open] { display: flex; color: #e0e0e0; margin: 0; }
+dialog::backdrop { background: #000a; }
+.amino-acid-modal[open] { flex-direction: column; }

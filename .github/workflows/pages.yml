@@ -46,7 +46,7 @@ jobs:
       - name: Collect public files
         run: |
           mkdir _site
-          cp index.html script.js styles.css _site/
+          cp index.html script.js interactions.js styles.css _site/
           cp -r data _site/data
       - uses: actions/upload-pages-artifact@v3
         with:
