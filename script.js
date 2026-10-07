@@ -139,8 +139,8 @@
                     <div class="paper-journal">${item.journal || 'Unknown journal'} ${item.year ? `(${item.year})` : ''}</div>
                     <div class="paper-abstract">${item.abstract || 'No abstract available.'}</div>
                     <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
-                        ${item.doi ? `<button onclick="event.stopPropagation(); window.open('https://doi.org/${item.doi}', '_blank')" style="background: #51cf66; border: none; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">View Paper</button>` : ''}
-                        ${item.pubmed_id ? `<button onclick="event.stopPropagation(); window.open('https://pubmed.ncbi.nlm.nih.gov/${item.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">PubMed</button>` : ''}
+                        ${item.doi ? `<button onclick="window.open('https://doi.org/${item.doi}', '_blank')" style="background: #51cf66; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">View Paper</button>` : ''}
+                        ${item.pubmed_id ? `<button onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${item.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">PubMed</button>` : ''}
                     </div>
                 `;
                 
@@ -156,7 +156,7 @@
         let currentPdbId = null;
         let rawPdbData = null;
         
-        // FASTA and hover functionality
+        // Observed protein residues and the current highlighted residue.
         let proteinSequence = [];
         let selectedResidue = null;
         
@@ -234,9 +234,9 @@
             initializeViewer();
             const pdbId = new URLSearchParams(window.location.search).get('pdb')?.trim();
             if (pdbId) {
-                quickLoad(pdbId);
+                quickLoad(pdbId, true);
             } else {
-                loadBundledExample();
+                loadBundledExample(true);
             }
             
             // Initialize secondary features
@@ -488,20 +488,21 @@
             }
         }
         
-        function quickLoad(pdbId) {
+        function quickLoad(pdbId, restoreUrl = false) {
             const pdbInput = document.getElementById('pdb-id');
             if (pdbInput) {
                 clearPdbError(); // Clear any previous errors
                 hidePdbValidationIndicator(); // Clear validation indicator
                 pdbInput.value = pdbId;
-                loadPDBFromId();
+                loadPDBFromId(restoreUrl);
             }
         }
         
         // Debounced loading function for performance
         const debouncedLoadPDB = PerformanceManager.debounce(loadPDBFromId, 300);
         
-        async function loadPDBFromId() {
+        async function loadPDBFromId(restoreUrl = false) {
+            if (!restoreUrl) pendingSharedState = null;
             const pdbInput = document.getElementById('pdb-id');
             if (!pdbInput) return;
             
@@ -556,7 +557,8 @@
         
         let structureRequest = 0;
 
-        async function loadBundledExample() {
+        async function loadBundledExample(restoreUrl = false) {
+            if (!restoreUrl) pendingSharedState = null;
             const request = ++structureRequest;
             showMessage('Loading bundled crambin...');
             try {
@@ -621,6 +623,7 @@
         }
 
         async function loadLocalFile(file) {
+            pendingSharedState = null;
             clearPdbError();
             hidePdbValidationIndicator();
             if (!file.name.toLowerCase().endsWith('.pdb')) {
@@ -697,6 +700,7 @@
         }
         
         function clearViewer() {
+            pendingSharedState = null;
             if (viewer) {
                 ++structureRequest;
                 resetMeasurement();
@@ -1070,7 +1074,7 @@
             return residueNames[resn] || resn;
         }
         
-        // FASTA sequence and hover functionality
+        // Build the observed standard-amino-acid sequence from parsed coordinates.
         function extractProteinSequence(model) {
             if (!model) return [];
             const standardAA = new Set(['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE',
@@ -1199,7 +1203,7 @@
         }
         
         async function fetchLiterature(pdbId) {
-            const request = structureRequest;
+            const model = currentModel;
             // Check cache first
             const cachedData = literatureCache.get(pdbId);
             if (cachedData) {
@@ -1224,7 +1228,7 @@
                 }
                 
                 const data = await response.json();
-                if (request !== structureRequest || currentPdbId !== pdbId) return;
+                if (currentModel !== model || currentPdbId !== pdbId) return;
                 const citations = data.citation || [];
                 
                 if (citations.length === 0) {
@@ -1242,7 +1246,7 @@
                 displayLiterature(pdbId, publications);
                 
             } catch (error) {
-                if (request === structureRequest && currentPdbId === pdbId) displayNoLiterature(pdbId, 'Failed to fetch publication data');
+                if (currentModel === model && currentPdbId === pdbId) displayNoLiterature(pdbId, 'Failed to fetch publication data');
             }
         }
         
@@ -1292,8 +1296,8 @@
                     <div class="paper-journal">${pub.journal || 'Unknown journal'} ${pub.year ? `(${pub.year})` : ''}</div>
                     <div class="paper-abstract">${pub.abstract || 'No abstract available.'}</div>
                     <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
-                        ${pub.doi ? `<button onclick="event.stopPropagation(); window.open('https://doi.org/${pub.doi}', '_blank')" style="background: #51cf66; border: none; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">View Paper</button>` : ''}
-                        ${pub.pubmed_id ? `<button onclick="event.stopPropagation(); window.open('https://pubmed.ncbi.nlm.nih.gov/${pub.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: white; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer;">PubMed</button>` : ''}
+                        ${pub.doi ? `<button onclick="window.open('https://doi.org/${pub.doi}', '_blank')" style="background: #51cf66; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">View Paper</button>` : ''}
+                        ${pub.pubmed_id ? `<button onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${pub.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">PubMed</button>` : ''}
                     </div>
                 `;
                 

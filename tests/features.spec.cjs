@@ -128,7 +128,7 @@ test('canvas picking measures atoms and sequence identity includes blank chains 
   expect(errors).toEqual([]);
 });
 
-test('latest load wins and Clear cancels pending RCSB responses', async ({ page }) => {
+test('latest load wins and Clear empties the displayed structure', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
   let complete;
@@ -176,7 +176,8 @@ test('live RCSB entry loads through the database controls', async ({ page }) => 
   await expect(page.locator('.sequence-residue')).toHaveCount(46);
   expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
   await page.getByRole('button', { name: 'Literature', exact: true }).click();
-  await expect(page.locator('#literature-info')).not.toHaveText('Loading publications...');
+  await expect(page.locator('#literature-info')).toContainText('Found');
+  await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
   await axeClean(page);
   expect(errors).toEqual([]);
 });
@@ -198,6 +199,7 @@ test('RCSB citation links and detail dialogs are keyboard accessible', async ({ 
   await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
   await page.getByRole('button', { name: 'Literature', exact: true }).click();
   await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
+  await axeClean(page);
   const title = page.getByRole('button', { name: 'Water structure of a hydrophobic protein at atomic resolution', exact: true });
   await title.focus();
   await page.keyboard.press('Enter');
@@ -207,5 +209,52 @@ test('RCSB citation links and detail dialogs are keyboard accessible', async ({ 
   await page.keyboard.press('Escape');
   await expect(page.locator('#paper-viewer')).not.toBeVisible();
   await expect(title).toBeFocused();
+  expect(errors).toEqual([]);
+});
+
+test('a failed replacement does not strand the retained model publications', async ({ page }) => {
+  const errors = collectErrors(page);
+  let complete;
+  const waiting = new Promise(resolve => { complete = resolve; });
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', body: pdb }));
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', async route => {
+    await waiting;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      citation: [{ title: 'Retained model publication', rcsb_authors: ['Test author'], year: 1984 }]
+    }) });
+  });
+  await page.goto('./?pdb=1CRN');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await dropPdb(page, 'no atom records', 'invalid.pdb');
+  await expect(page.locator('#pdb-error-display')).toContainText('No atoms found');
+  const response = page.waitForResponse('https://data.rcsb.org/rest/v1/core/entry/1CRN');
+  complete();
+  await response;
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.locator('#literature-info')).toContainText('Found 1 publication');
+  await expect(page.getByRole('button', { name: 'Retained model publication' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('superseding a shared entry does not restore its measurement onto a local file', async ({ page }) => {
+  const errors = collectErrors(page);
+  let complete;
+  const waiting = new Promise(resolve => { complete = resolve; });
+  await page.route('https://files.rcsb.org/download/1ABC.pdb', async route => {
+    await waiting;
+    await route.fulfill({ contentType: 'text/plain', body: pdb });
+  });
+  await page.goto('./?pdb=1ABC&atoms=0,1&style=sphere&residue=%5B%22A%22,4,%22%22%5D');
+  await expect(page.locator('#status-display')).toHaveText('Loading 1ABC...');
+  await dropPdb(page, pdb, 'replacement.pdb');
+  await expect(page.locator('#status-display')).toHaveText('replacement.pdb loaded successfully');
+  await expect(page.locator('#distance-result')).toHaveText('No atoms selected');
+  await expect(page.locator('#style-select')).toHaveValue('cartoon');
+  expect(await page.evaluate(() => selectedResidue)).toBeNull();
+  const response = page.waitForResponse('https://files.rcsb.org/download/1ABC.pdb');
+  complete();
+  await response;
+  expect(await page.evaluate(() => currentPdbId)).toBeNull();
   expect(errors).toEqual([]);
 });
