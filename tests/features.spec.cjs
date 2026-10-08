@@ -138,6 +138,25 @@ test('drag and drop stays local, invalid input preserves the model, and Clear em
   expect(errors).toEqual([]);
 });
 
+test('a new load error stays visible for its full eight seconds', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.clock.install();
+  await loaded(page);
+  await page.clock.pauseAt(Date.now() + 1000);
+  const display = page.locator('#pdb-error-display');
+  await page.locator('#pdb-id').fill('AB');
+  await page.getByRole('button', { name: 'Load from Database' }).click();
+  await expect(display).toHaveText('PDB ID must be exactly 4 characters (letters and numbers only)');
+  await page.clock.fastForward(7000);
+  await dropPdb(page, 'not a structure');
+  await expect(display).toContainText('No atoms found');
+  await page.clock.fastForward(2000);
+  await expect(display).toHaveClass(/show/);
+  await page.clock.fastForward(7000);
+  await expect(display).not.toHaveClass(/show/);
+  expect(errors).toEqual([]);
+});
+
 // A small PDB-format fixture makes projected atom picking unambiguous and exercises
 // a blank chain, residue zero, and distinct insertion codes rather than protein biology.
 const synthetic = [

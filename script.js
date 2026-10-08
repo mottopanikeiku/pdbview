@@ -226,6 +226,7 @@
         }
         
         // Local PDB error display functions
+        let pdbErrorTimer;
         function showPdbError(message) {
             const errorDisplay = document.getElementById('pdb-error-display');
             if (!errorDisplay) return;
@@ -233,8 +234,9 @@
             errorDisplay.textContent = message;
             errorDisplay.classList.add('show');
             
-            // Auto-hide after 8 seconds
-            setTimeout(() => hidePdbError(), 8000);
+            // Auto-hide 8 seconds after the latest error, not an earlier one.
+            clearTimeout(pdbErrorTimer);
+            pdbErrorTimer = setTimeout(hidePdbError, 8000);
         }
         
         function hidePdbError() {
