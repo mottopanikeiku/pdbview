@@ -211,10 +211,13 @@ function restoreSharedView() {
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('viewer-container');
     canvas.addEventListener('keydown', event => {
+        // Leave browser shortcuts such as Ctrl/Cmd +/- page zoom alone.
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
         const rotation = { ArrowLeft: [-10, 'y'], ArrowRight: [10, 'y'], ArrowUp: [-10, 'x'], ArrowDown: [10, 'x'] }[event.key];
         if (rotation) viewer.rotate(...rotation);
         else if (event.key === '+' || event.key === '=') viewer.zoom(1.15);
         else if (event.key === '-') viewer.zoom(1 / 1.15);
+        else if (event.key.toLowerCase() === 'c') centerView();
         else return;
         event.preventDefault();
         viewer.render();
