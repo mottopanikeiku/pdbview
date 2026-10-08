@@ -562,8 +562,11 @@
                 if (atomsTitle) atomsTitle.textContent = 'Atom Data';
                 if (atomsInfo) atomsInfo.textContent = 'Load a structure to view atomic coordinates and properties';
                 if (atomsContent) {
+                    atomsContent.style.height = '';
                     atomsContent.innerHTML = '<div class="no-rawpdb"><div>No structure loaded</div><div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view atomic data</div></div>';
                 }
+                const atomStats = document.getElementById('atom-stats');
+                if (atomStats) atomStats.textContent = 'No atoms loaded';
                 
                 // Clean up resources
                 MemoryManager.cleanupResources();

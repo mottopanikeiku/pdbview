@@ -287,6 +287,11 @@ test('atom filters survive tab switches and reset for a new structure', async ({
   await expect(page.locator('#atom-type-filter')).toHaveValue('all');
   await expect(page.locator('#atom-element-filter')).toHaveValue('all');
   await expect(page.locator('#atom-stats')).toHaveText('327 atoms (327 ATOM, 0 HETATM)');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.locator('#atom-stats')).toHaveText('No atoms loaded');
+  await expect(page.locator('#atom-element-filter option')).toHaveText(['All Elements']);
+  await expect(page.locator('.atom-table-row')).toHaveCount(0);
+  expect(await page.locator('#atom-table-content').evaluate(element => element.style.height)).toBe('');
   expect(errors).toEqual([]);
 });
 
