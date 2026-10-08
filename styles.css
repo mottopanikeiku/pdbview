@@ -1268,6 +1268,7 @@ button:active {
 .sequence-chain > span { font-size: 12px; }
 button.sequence-residue { width: auto; min-width: 44px; min-height: 36px; padding: 5px; margin: 0; font-family: monospace; }
 button.sequence-residue[aria-pressed="true"] { color: #111; background: #ffdc55; }
+#interactive-btn[aria-pressed="true"], #measure-toggle[aria-pressed="true"] { background: #333333; border-color: #ffdc55; }
 :focus-visible { outline: 3px solid #ffdc55 !important; outline-offset: 2px; }
 #distance-result { display: block; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; margin-top: 8px; }
 .file-dragging .container { outline: 4px dashed #ffdc55; outline-offset: -5px; }

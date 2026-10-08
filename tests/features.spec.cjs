@@ -202,6 +202,7 @@ test('residue details report residue zero and insertion codes', async ({ page })
   await expect(page.locator('#status-display')).toHaveText('identities.pdb loaded successfully');
   await page.selectOption('#style-select', 'sphere');
   await page.locator('#interactive-btn').click();
+  await expect(page.locator('#interactive-btn')).toHaveAttribute('aria-pressed', 'true');
   // Interactive mode schedules its render on the next animation frame; pick after it.
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const positions = await page.evaluate(() => viewer.modelToScreen(currentModel.selectedAtoms({})));
@@ -211,6 +212,10 @@ test('residue details report residue zero and insertion codes', async ({ page })
   await page.keyboard.press('Escape');
   await page.mouse.click(positions[1].x, positions[1].y);
   await expect(page.locator('#amino-acid-info')).toContainText('Position: 1A');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.locator('#interactive-btn')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#interactive-btn')).toHaveText('Interactive Mode: OFF');
   expect(errors).toEqual([]);
 });
 

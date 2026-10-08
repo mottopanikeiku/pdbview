@@ -542,7 +542,7 @@
                     const btn = document.getElementById('interactive-btn');
                     if (btn) {
                         btn.textContent = 'Interactive Mode: OFF';
-                        btn.style.background = '#2a2a2a';
+                        btn.setAttribute('aria-pressed', 'false');
                     }
                 }
                 
@@ -585,12 +585,12 @@
             
             if (interactiveMode) {
                 btn.textContent = 'Interactive Mode: ON';
-                btn.style.background = '#333333';
+                btn.setAttribute('aria-pressed', 'true');
                 enableClickHandling();
                 showMessage('Interactive mode enabled - click on amino acids to explore', 'success');
             } else {
                 btn.textContent = 'Interactive Mode: OFF';
-                btn.style.background = '#2a2a2a';
+                btn.setAttribute('aria-pressed', 'false');
                 disableClickHandling();
                 closeAminoAcidModal();
                 showMessage('Interactive mode disabled', 'info');
