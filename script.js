@@ -71,33 +71,6 @@
         const literatureCache = new CacheManager(600000); // 10 minutes
         const pdbCache = new CacheManager(1800000); // 30 minutes
         
-        // Performance monitoring
-        class PerformanceMonitor {
-            static frameCount = 0;
-            static lastFPSUpdate = performance.now();
-            static currentFPS = 0;
-            
-            static trackRender() {
-                this.frameCount++;
-                const now = performance.now();
-                
-                if (now - this.lastFPSUpdate >= 1000) {
-                    this.currentFPS = Math.round((this.frameCount * 1000) / (now - this.lastFPSUpdate));
-                    this.frameCount = 0;
-                    this.lastFPSUpdate = now;
-                    
-                    // Warn if FPS drops too low
-                    if (this.currentFPS < 20) {
-                        console.warn(`Low FPS detected: ${this.currentFPS}`);
-                    }
-                }
-            }
-            
-            static getFPS() {
-                return this.currentFPS;
-            }
-        }
-        
         // fast grid variables
         let fastGrid = {
             data: [],
@@ -226,7 +199,6 @@
             renderAnimationFrame = requestAnimationFrame(() => {
                 if (viewer) {
                     viewer.render();
-                    PerformanceMonitor.trackRender();
                 }
                 isRenderScheduled = false;
             });
@@ -1345,8 +1317,6 @@
 
         // fast grid implementation inspired by gabrielpetersson/fast-grid
         function initializeFastPdbGrid(lines) {
-            const startTime = performance.now();
-            
             // parse data
             fastGrid.data = lines.map((line, index) => ({
                 lineNumber: index + 1,
@@ -1376,7 +1346,6 @@
                     </div>
                     <div class="fast-grid-stats">
                         <span>Showing <span id="grid-visible-count">${fastGrid.filteredData.length}</span> of ${fastGrid.data.length} records</span>
-                        <span class="fast-grid-performance" id="grid-performance">120 FPS</span>
                     </div>
                     <div class="fast-grid-header">
                         <div class="fast-grid-header-cell">Line</div>
@@ -1405,9 +1374,6 @@
             // initial render
             updateFastGridDimensions();
             updateFastGridView();
-            
-            const loadTime = (performance.now() - startTime).toFixed(1);
-            $('#grid-performance').text(`Loaded in ${loadTime}ms`);
         }
 
         function updateFastGridDimensions() {
@@ -1443,11 +1409,6 @@
                 const rowElement = createFastGridRow(row, i);
                 fastGrid.container.appendChild(rowElement);
             }
-            
-            // update performance indicator
-            const fps = Math.min(120, 1000 / (performance.now() - (fastGrid.lastRender || performance.now())));
-            $('#grid-performance').text(`${Math.round(fps)} FPS`);
-            fastGrid.lastRender = performance.now();
         }
 
         function createFastGridRow(rowData, index) {
@@ -1467,8 +1428,6 @@
         }
 
         function fastGridFilter(recordType) {
-            const startTime = performance.now();
-            
             // update dropdown selection
             const dropdown = document.getElementById('pdb-filter-select');
             if (dropdown && dropdown.value !== recordType) {
@@ -1492,9 +1451,6 @@
             
             // update stats
             $('#grid-visible-count').text(fastGrid.filteredData.length);
-            
-            const filterTime = (performance.now() - startTime).toFixed(1);
-            $('#grid-performance').text(`Filtered in ${filterTime}ms`);
         }
 
         function filterPdbRecords(recordType) {

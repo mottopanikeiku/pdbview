@@ -897,11 +897,6 @@ button:active {
     align-items: center;
 }
 
-.fast-grid-performance {
-    font-size: 9px;
-    color: #51cf66;
-}
-
 .line-number {
     color: #666;
     font-weight: 500;
