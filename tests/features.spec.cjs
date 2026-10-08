@@ -156,6 +156,26 @@ test('atom table keeps zero occupancy and infers a blank element column from the
   expect(errors).toEqual([]);
 });
 
+test('atom filters survive tab switches and reset for a new structure', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await page.selectOption('#atom-element-filter', 'S');
+  await expect(page.locator('#atom-stats')).toContainText('Showing 6 of 327 atoms');
+  await page.getByRole('button', { name: '3D View', exact: true }).click();
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('#atom-element-filter')).toHaveValue('S');
+  await expect(page.locator('#atom-stats')).toContainText('Showing 6 of 327 atoms');
+  await expect(page.locator('.atom-table-row')).toHaveCount(6);
+  await page.selectOption('#atom-type-filter', 'HETATM');
+  await dropPdb(page, pdb, 'replacement.pdb');
+  await expect(page.locator('#status-display')).toHaveText('replacement.pdb loaded successfully');
+  await expect(page.locator('#atom-type-filter')).toHaveValue('all');
+  await expect(page.locator('#atom-element-filter')).toHaveValue('all');
+  await expect(page.locator('#atom-stats')).toHaveText('327 atoms (327 ATOM, 0 HETATM)');
+  expect(errors).toEqual([]);
+});
+
 test('latest load wins and Clear empties the displayed structure', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);

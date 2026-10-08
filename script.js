@@ -640,6 +640,7 @@
                 atomTable.data = [];
                 atomTable.filteredData = [];
                 atomTable.isParsing = false;
+                populateAtomFilters();
                 
                 // Reset atoms tab
                 const atomsTitle = document.getElementById('atoms-title');
@@ -1598,7 +1599,8 @@
                 atomsContent.innerHTML = '';
             }
             
-            // Initialize the atom table and update stats after parsing
+            // New data gets fresh filter choices; switching tabs keeps the user's filters.
+            populateAtomFilters();
             if (atomTable.data.length > 0) {
                 initializeAtomTable();
             }
@@ -1643,9 +1645,6 @@
             // Store the handler for cleanup
             atomTable.scrollHandler = scrollHandler;
             
-            // Initialize filter options
-            populateAtomFilters();
-            
             // Wait for layout to stabilize before initial render
             requestAnimationFrame(() => {
                 updateAtomTableDimensions();
@@ -1657,6 +1656,9 @@
         }
         
         function populateAtomFilters() {
+            const typeSelect = document.getElementById('atom-type-filter');
+            if (typeSelect) typeSelect.value = 'all';
+            
             // Get unique chains
             const chains = [...new Set(atomTable.data.map(atom => atom.chainId))].filter(Boolean).sort();
             const chainSelect = document.getElementById('atom-chain-filter');
