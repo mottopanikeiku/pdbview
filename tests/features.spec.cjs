@@ -219,6 +219,19 @@ test('residue details report residue zero and insertion codes', async ({ page })
   expect(errors).toEqual([]);
 });
 
+test('the viewer uses the first model and alternate location while the Atoms tab lists every record', async ({ page }) => {
+  const errors = collectErrors(page);
+  const first = 'ATOM      1  CA  ALA A   1       0.000   0.000   0.000  1.00 10.00           C';
+  const altA = 'ATOM      2  CA AGLY A   2       3.800   0.000   0.000  0.50 10.00           C';
+  const altB = 'ATOM      3  CA BGLY A   2       3.900   0.100   0.000  0.50 10.00           C';
+  await loaded(page);
+  await dropPdb(page, ['MODEL        1', first, altA, altB, 'ENDMDL', 'MODEL        2', first, altA, altB, 'ENDMDL', 'END'].join('\n'), 'models.pdb');
+  await expect(page.locator('#status-display')).toHaveText('models.pdb loaded successfully');
+  expect(await page.evaluate(() => currentModel.selectedAtoms({}).map(atom => atom.serial))).toEqual([1, 2]);
+  await expect(page.locator('#atoms-info')).toHaveText('6 ATOM records, 0 HETATM records');
+  expect(errors).toEqual([]);
+});
+
 test('atom table keeps zero occupancy and infers a blank element column from the atom name', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);

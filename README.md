@@ -34,6 +34,7 @@ Open `http://localhost:8000/`. Tests start their own server under `/pdbview/`; t
 - PDB input only; local files are limited to 50 MB. Large structures and dense representations may be slow.
 - Share links depend on atom ordering in the fetched PDB. They do not embed coordinates or publication data.
 - The sequence excludes modified amino acids, nucleic acids and residues absent from the coordinates. Measurements use the parsed model, not symmetry mates or periodic boundaries.
+- The 3D view, structure stats, sequence and measurements use the first model and first alternate location that 3Dmol parses. The Atoms and Raw PDB tabs list every record, so their counts are larger for NMR ensembles and alternate conformations.
 - axe checks do not prove every accessibility need is met. I test Chromium, not every browser or assistive technology.
 - This is an inspection tool, not a simulation or structure-quality assessment.
 
