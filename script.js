@@ -1538,6 +1538,8 @@
                         }
                         
                         // Parse PDB ATOM/HETATM record format
+                        // Blank occupancy defaults to 1.0; a recorded 0.00 must stay zero.
+                        const occupancy = parseFloat(line.substring(54, 60));
                         const atomRecord = {
                             lineNumber: index + 1,
                             recordType: recordType,
@@ -1551,9 +1553,9 @@
                             x: parseFloat(line.substring(30, 38).trim()) || 0.0,
                             y: parseFloat(line.substring(38, 46).trim()) || 0.0,
                             z: parseFloat(line.substring(46, 54).trim()) || 0.0,
-                            occupancy: line.length >= 60 ? (parseFloat(line.substring(54, 60).trim()) || 1.0) : 1.0,
+                            occupancy: Number.isNaN(occupancy) ? 1.0 : occupancy,
                             tempFactor: line.length >= 66 ? (parseFloat(line.substring(60, 66).trim()) || 0.0) : 0.0,
-                            element: line.length >= 78 ? line.substring(76, 78).trim() : 
+                            element: line.substring(76, 78).trim() ||
                                     line.substring(12, 14).trim().replace(/[0-9]/g, '').trim(),
                             charge: line.length >= 80 ? line.substring(78, 80).trim() : ''
                         };

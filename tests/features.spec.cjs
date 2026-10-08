@@ -137,6 +137,25 @@ test('canvas picking measures atoms and sequence identity includes blank chains 
   expect(errors).toEqual([]);
 });
 
+test('atom table keeps zero occupancy and infers a blank element column from the atom name', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, [
+    'ATOM      1  N   ALA A   1       1.000   2.000   3.000  0.00 15.00           N',
+    'HETATM    2 FE   HEM A 101       0.000   0.000   0.000  1.00 20.00            ',
+    'END'
+  ].join('\n'), 'columns.pdb');
+  await expect(page.locator('#status-display')).toHaveText('columns.pdb loaded successfully');
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  const rows = page.locator('.atom-table-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0).locator('.factor').first()).toHaveText('0.00');
+  await expect(rows.nth(0).locator('.element')).toHaveText('N');
+  await expect(rows.nth(1).locator('.element')).toHaveText('FE');
+  await expect(page.locator('#atom-element-filter option')).toHaveText(['All Elements', 'FE', 'N']);
+  expect(errors).toEqual([]);
+});
+
 test('latest load wins and Clear empties the displayed structure', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
