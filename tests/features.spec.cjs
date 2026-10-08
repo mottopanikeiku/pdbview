@@ -221,6 +221,24 @@ test('RCSB citation links and detail dialogs are keyboard accessible', async ({ 
   expect(errors).toEqual([]);
 });
 
+test('entries with more than five citations list every publication', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', body: pdb }));
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      citation: Array.from({ length: 7 }, (_, index) => ({ title: `Citation ${index + 1}`, rcsb_authors: ['Test author'], year: 2000 + index }))
+    }) }));
+  await page.goto('./?pdb=1CRN');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.locator('#literature-info')).toHaveText('Found 7 publication(s) related to 1CRN');
+  await expect(page.locator('.paper-item')).toHaveCount(7);
+  await page.getByRole('button', { name: 'Citation 7', exact: true }).click();
+  await expect(page.locator('#paper-viewer-title')).toHaveText('Citation 7');
+  expect(errors).toEqual([]);
+});
+
 test('a failed replacement does not strand the retained model publications', async ({ page }) => {
   const errors = collectErrors(page);
   let complete;

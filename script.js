@@ -11,19 +11,6 @@
                     timeout = setTimeout(later, wait);
                 };
             }
-            
-            static throttle(func, limit) {
-                let inThrottle;
-                return function() {
-                    const args = arguments;
-                    const context = this;
-                    if (!inThrottle) {
-                        func.apply(context, args);
-                        inThrottle = true;
-                        setTimeout(() => inThrottle = false, limit);
-                    }
-                }
-            }
         }
         
         // Enhanced cache manager with expiration
@@ -58,93 +45,6 @@
             
             size() {
                 return this.cache.size;
-            }
-        }
-        
-        // Virtual scroll manager for literature
-        class VirtualScrollManager {
-            constructor(container, itemHeight = 120) {
-                this.container = container;
-                this.itemHeight = itemHeight;
-                this.items = [];
-                this.visibleItems = [];
-                this.startIndex = 0;
-                this.endIndex = 0;
-                this.buffer = 3;
-                this.scrollTop = 0;
-                
-                this.setupContainer();
-                this.bindEvents();
-            }
-            
-            setupContainer() {
-                this.container.innerHTML = `
-                    <div class="virtual-scroll-content"></div>
-                `;
-                this.content = this.container.querySelector('.virtual-scroll-content');
-            }
-            
-            bindEvents() {
-                this.container.addEventListener('scroll', 
-                    PerformanceManager.throttle(() => this.updateView(), 16)
-                );
-            }
-            
-            setItems(items) {
-                this.items = items;
-                this.content.style.height = `${items.length * this.itemHeight}px`;
-                this.updateView();
-            }
-            
-            updateView() {
-                const containerHeight = this.container.clientHeight;
-                const scrollTop = this.container.scrollTop;
-                
-                const visibleCount = Math.ceil(containerHeight / this.itemHeight) + this.buffer * 2;
-                this.startIndex = Math.max(0, Math.floor(scrollTop / this.itemHeight) - this.buffer);
-                this.endIndex = Math.min(this.items.length, this.startIndex + visibleCount);
-                
-                this.render();
-            }
-            
-            render() {
-                // Clear existing items
-                this.content.innerHTML = '';
-                
-                for (let i = this.startIndex; i < this.endIndex; i++) {
-                    const item = this.items[i];
-                    if (!item) continue;
-                    
-                    const element = this.createItemElement(item, i);
-                    element.style.top = `${i * this.itemHeight}px`;
-                    element.classList.add('virtual-scroll-item');
-                    this.content.appendChild(element);
-                }
-            }
-            
-            createItemElement(item, index) {
-                const div = document.createElement('div');
-                div.className = 'paper-item';
-                div.style.height = `${this.itemHeight - 12}px`; // Account for margin
-                
-                const authors = Array.isArray(item.authors) ? 
-                    item.authors.slice(0, 3).map(a => a.name || a).join(', ') + 
-                    (item.authors.length > 3 ? ' et al.' : '') : 
-                    (item.rcsb_authors || []).slice(0, 3).join(', ') + 
-                    (item.rcsb_authors && item.rcsb_authors.length > 3 ? ' et al.' : '');
-                
-                div.innerHTML = `
-                    <button class="paper-title" onclick="viewPaper(${index})">${item.title || 'Untitled'}</button>
-                    <div class="paper-authors">${authors || 'Unknown authors'}</div>
-                    <div class="paper-journal">${item.journal || 'Unknown journal'} ${item.year ? `(${item.year})` : ''}</div>
-                    <div class="paper-abstract">${item.abstract || 'No abstract available.'}</div>
-                    <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
-                        ${item.doi ? `<button onclick="window.open('https://doi.org/${item.doi}', '_blank')" style="background: #51cf66; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">View Paper</button>` : ''}
-                        ${item.pubmed_id ? `<button onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${item.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">PubMed</button>` : ''}
-                    </div>
-                `;
-                
-                return div;
             }
         }
         
@@ -190,9 +90,6 @@
                 return this.currentFPS;
             }
         }
-        
-        // Virtual scroll manager
-        let virtualScrollManager = null;
         
         // fast grid variables
         let fastGrid = {
@@ -267,12 +164,6 @@
         });
         
         function initializeSecondaryFeatures() {
-            // Initialize virtual scroll manager for literature
-            const papersListElement = document.getElementById('papers-list');
-            if (papersListElement) {
-                virtualScrollManager = new VirtualScrollManager(papersListElement);
-            }
-            
             // Initialize image lazy loading
             MemoryManager.optimizeImageLoading();
             
@@ -1264,15 +1155,7 @@
                 return;
             }
             
-            // Use virtual scrolling for better performance with many publications
-            if (virtualScrollManager && publications.length > 5) {
-                // Store publications globally for viewPaper function access
-                window.currentPublications = publications;
-                virtualScrollManager.setItems(publications);
-            } else {
-                // Use regular rendering for small lists
-                displayLiteratureRegular(publications, listElement);
-            }
+            displayLiteratureRegular(publications, listElement);
         }
         
         function displayLiteratureRegular(publications, container) {
