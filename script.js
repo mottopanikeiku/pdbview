@@ -47,6 +47,13 @@
                 return this.cache.size;
             }
         }
+
+        // RCSB metadata is text; escape it before building markup.
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[character]);
+        }
         
         // Global variables
         let viewer;
@@ -1174,13 +1181,13 @@
                 paperItem.className = 'paper-item';
                 
                 paperItem.innerHTML = `
-                    <button class="paper-title" onclick="viewPaper(${index})">${pub.title || 'Untitled'}</button>
-                    <div class="paper-authors">${authors || 'Unknown authors'}</div>
-                    <div class="paper-journal">${pub.journal || 'Unknown journal'} ${pub.year ? `(${pub.year})` : ''}</div>
-                    <div class="paper-abstract">${pub.abstract || 'No abstract available.'}</div>
-                    <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
-                        ${pub.doi ? `<button onclick="window.open('https://doi.org/${pub.doi}', '_blank')" style="background: #51cf66; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">View Paper</button>` : ''}
-                        ${pub.pubmed_id ? `<button onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${pub.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">PubMed</button>` : ''}
+                    <button class="paper-title" onclick="viewPaper(${index})">${escapeHtml(pub.title || 'Untitled')}</button>
+                    <div class="paper-authors">${escapeHtml(authors || 'Unknown authors')}</div>
+                    <div class="paper-journal">${escapeHtml(pub.journal || 'Unknown journal')} ${pub.year ? `(${escapeHtml(pub.year)})` : ''}</div>
+                    <div class="paper-abstract">${escapeHtml(pub.abstract || 'No abstract available.')}</div>
+                    <div class="paper-actions">
+                        ${pub.doi ? `<a class="paper-link doi-link" href="https://doi.org/${escapeHtml(pub.doi)}" target="_blank" rel="noopener">View Paper</a>` : ''}
+                        ${pub.pubmed_id ? `<a class="paper-link pubmed-link" href="https://pubmed.ncbi.nlm.nih.gov/${escapeHtml(pub.pubmed_id)}/" target="_blank" rel="noopener">PubMed</a>` : ''}
                     </div>
                 `;
                 
@@ -1232,35 +1239,34 @@
             }
             
             if (bodyElement) {
+                const authors = Array.isArray(paper.authors) ?
+                    paper.authors.map(a => a.name || a).join(', ') :
+                    (paper.rcsb_authors || []).join(', ') || 'Unknown authors';
                 const content = `
                     <div class="paper-detail">
-                        <h3>${paper.title || 'Untitled'}</h3>
+                        <h3>${escapeHtml(paper.title || 'Untitled')}</h3>
                         
                         <div class="detail-section">
                             <div class="detail-label">Authors</div>
-                            <div class="detail-value">
-                                ${Array.isArray(paper.authors) ? 
-                                    paper.authors.map(a => a.name || a).join(', ') : 
-                                    (paper.rcsb_authors || []).join(', ') || 'Unknown authors'}
-                            </div>
+                            <div class="detail-value">${escapeHtml(authors)}</div>
                         </div>
                         
                         <div class="detail-section">
                             <div class="detail-label">Journal</div>
-                            <div class="detail-value">${paper.journal || 'Unknown journal'}</div>
+                            <div class="detail-value">${escapeHtml(paper.journal || 'Unknown journal')}</div>
                         </div>
                         
                         <div class="detail-section">
                             <div class="detail-label">Year</div>
-                            <div class="detail-value">${paper.year || 'Unknown'}</div>
+                            <div class="detail-value">${escapeHtml(paper.year || 'Unknown')}</div>
                         </div>
                         
                         ${paper.doi ? `
                             <div class="detail-section">
                                 <div class="detail-label">DOI</div>
                                 <div class="detail-value">
-                                    <a href="https://doi.org/${paper.doi}" target="_blank" style="color: #51cf66;">
-                                        ${paper.doi}
+                                    <a href="https://doi.org/${escapeHtml(paper.doi)}" target="_blank" rel="noopener" style="color: #51cf66;">
+                                        ${escapeHtml(paper.doi)}
                                     </a>
                                 </div>
                             </div>
@@ -1270,8 +1276,8 @@
                             <div class="detail-section">
                                 <div class="detail-label">PubMed ID</div>
                                 <div class="detail-value">
-                                    <a href="https://pubmed.ncbi.nlm.nih.gov/${paper.pubmed_id}/" target="_blank" style="color: #51cf66;">
-                                        ${paper.pubmed_id}
+                                    <a href="https://pubmed.ncbi.nlm.nih.gov/${escapeHtml(paper.pubmed_id)}/" target="_blank" rel="noopener" style="color: #51cf66;">
+                                        ${escapeHtml(paper.pubmed_id)}
                                     </a>
                                 </div>
                             </div>
@@ -1281,7 +1287,7 @@
                             <div class="detail-section">
                                 <div class="detail-label">Abstract</div>
                                 <div class="detail-value" style="line-height: 1.6; color: #cccccc;">
-                                    ${paper.abstract}
+                                    ${escapeHtml(paper.abstract)}
                                 </div>
                             </div>
                         ` : ''}

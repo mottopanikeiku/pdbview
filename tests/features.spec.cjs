@@ -186,7 +186,7 @@ test('live RCSB entry loads through the database controls', async ({ page }) => 
   expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
   await page.getByRole('button', { name: 'Literature', exact: true }).click();
   await expect(page.locator('#literature-info')).toContainText('Found');
-  await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'PubMed', exact: true })).toBeVisible();
   await axeClean(page);
   expect(errors).toEqual([]);
 });
@@ -207,7 +207,8 @@ test('RCSB citation links and detail dialogs are keyboard accessible', async ({ 
   await page.goto('./?pdb=1CRN');
   await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
   await page.getByRole('button', { name: 'Literature', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'PubMed', exact: true })).toHaveAttribute('href', 'https://pubmed.ncbi.nlm.nih.gov/16593516/');
+  await expect(page.getByRole('link', { name: 'View Paper', exact: true })).toHaveAttribute('href', 'https://doi.org/10.1073/pnas.81.19.6014');
   await axeClean(page);
   const title = page.getByRole('button', { name: 'Water structure of a hydrophobic protein at atomic resolution', exact: true });
   await title.focus();
@@ -236,6 +237,28 @@ test('entries with more than five citations list every publication', async ({ pa
   await expect(page.locator('.paper-item')).toHaveCount(7);
   await page.getByRole('button', { name: 'Citation 7', exact: true }).click();
   await expect(page.locator('#paper-viewer-title')).toHaveText('Citation 7');
+  expect(errors).toEqual([]);
+});
+
+test('citation metadata with markup characters is shown as text', async ({ page }) => {
+  const errors = collectErrors(page);
+  const title = 'Binding of Ca<sup>2+</sup> & <img src=x onerror="window.injected=1"> at pH < 5';
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', body: pdb }));
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      citation: [{ title, rcsb_authors: ['O\'Brien, <b>A</b>'], pdbx_database_id_DOI: '10.1000/a"b\'c', year: 2020 }]
+    }) }));
+  await page.goto('./?pdb=1CRN');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.locator('.paper-title')).toHaveText(title);
+  await expect(page.locator('.paper-authors')).toHaveText('O\'Brien, <b>A</b>');
+  await expect(page.getByRole('link', { name: 'View Paper', exact: true })).toHaveAttribute('href', 'https://doi.org/10.1000/a"b\'c');
+  await page.locator('.paper-title').click();
+  await expect(page.locator('#paper-viewer h3')).toHaveText(title);
+  expect(await page.locator('#papers-list img, #paper-viewer img, #papers-list b').count()).toBe(0);
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
   expect(errors).toEqual([]);
 });
 

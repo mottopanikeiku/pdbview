@@ -610,6 +610,28 @@ button:active {
     -webkit-box-orient: vertical;
 }
 
+.paper-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.paper-link {
+    border-radius: 3px;
+    color: #111111;
+    font-size: 12px;
+    padding: 8px;
+    text-decoration: none;
+}
+
+.doi-link {
+    background: #51cf66;
+}
+
+.pubmed-link {
+    background: #4a9eff;
+}
+
 .loading-literature {
     display: flex;
     align-items: center;
