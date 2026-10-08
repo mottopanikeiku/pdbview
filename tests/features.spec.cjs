@@ -93,6 +93,22 @@ test('canvas shortcuts center the view and leave modified browser shortcuts alon
   expect(errors).toEqual([]);
 });
 
+test('the hidden atom table does not poll for layout', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  const calls = await page.evaluate(async () => {
+    let count = 0;
+    const original = updateAtomTableView;
+    window.updateAtomTableView = () => { count++; original(); };
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return count;
+  });
+  expect(calls).toBe(0);
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('.atom-table-row').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('drag and drop stays local, invalid input preserves the model, and Clear empties it', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);

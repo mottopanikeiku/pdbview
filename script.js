@@ -1647,11 +1647,8 @@
             const viewportHeight = atomTable.viewport.clientHeight;
             const totalHeight = atomTable.filteredData.length * atomTable.rowHeight;
             
-            // Ensure viewport has proper height
-            if (viewportHeight === 0) {
-                setTimeout(() => updateAtomTableView(), 50);
-                return;
-            }
+            // A hidden tab has no height; switchTab('atoms') renders once it is visible.
+            if (viewportHeight === 0) return;
             
             // Calculate visible range - account for zoom level (smaller % = more rows visible)
             const effectiveHeight = viewportHeight * (100 / atomZoomLevel);
