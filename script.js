@@ -1774,7 +1774,7 @@
                 <div class="atom-table-cell atom-name">${atom.atomName}</div>
                 <div class="atom-table-cell residue-name">${atom.resName}</div>
                 <div class="atom-table-cell chain-id">${atom.chainId || '-'}</div>
-                <div class="atom-table-cell">${atom.resSeq}</div>
+                <div class="atom-table-cell">${atom.resSeq}${escapeHtml(atom.iCode)}</div>
                 <div class="atom-table-cell coordinate">${x}</div>
                 <div class="atom-table-cell coordinate">${y}</div>
                 <div class="atom-table-cell coordinate">${z}</div>

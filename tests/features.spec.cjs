@@ -137,6 +137,17 @@ test('canvas picking measures atoms and sequence identity includes blank chains 
   expect(errors).toEqual([]);
 });
 
+test('atom table residue numbers include insertion codes', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, synthetic, 'identities.pdb');
+  await expect(page.locator('#status-display')).toHaveText('identities.pdb loaded successfully');
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('.atom-table-row')).toHaveCount(4);
+  await expect(page.locator('.atom-table-row .atom-table-cell:nth-child(6)')).toHaveText(['0', '1A', '1B', '1']);
+  expect(errors).toEqual([]);
+});
+
 test('atom table keeps zero occupancy and infers a blank element column from the atom name', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
