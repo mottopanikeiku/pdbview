@@ -59,9 +59,7 @@
         let viewer;
         let currentModel;
         let interactiveMode = false;
-        let selectedAtoms = [];
         let currentPdbId = null;
-        let rawPdbData = null;
         
         // Observed protein residues and the current highlighted residue.
         let proteinSequence = [];
@@ -75,26 +73,19 @@
         let fastGrid = {
             data: [],
             filteredData: [],
-            currentFilter: 'all',
-            visibleRows: [],
             rowHeight: 24,
             containerHeight: 0,
-            scrollTop: 0,
             startIndex: 0,
             endIndex: 0,
             buffer: 10,
             container: null,
-            viewport: null,
-            header: null
+            viewport: null
         };
         
         // atom table variables
         let atomTable = {
             data: [],
             filteredData: [],
-            currentTypeFilter: 'all',
-            currentChainFilter: 'all',
-            currentElementFilter: 'all',
             rowHeight: 22,
             containerHeight: 0,
             startIndex: 0,
@@ -116,13 +107,14 @@
                 loadBundledExample(true);
             }
             
-            // Initialize secondary features
-            initializeSecondaryFeatures();
+            setupKeyboardShortcuts();
             
-            // Initialize advanced features last
-            setTimeout(() => {
-                initializeAdvancedFeatures();
-            }, 500);
+            // Bound the in-memory download and publication caches.
+            setInterval(() => {
+                if (literatureCache.size() > 20 || pdbCache.size() > 10) {
+                    MemoryManager.cleanupResources();
+                }
+            }, 300000); // Every 5 minutes
             
             // Handle window resize for fast grid and atom table
             window.addEventListener('resize', PerformanceManager.debounce(() => {
@@ -143,27 +135,6 @@
             }, 100));
         });
         
-        function initializeSecondaryFeatures() {
-            // Initialize image lazy loading
-            MemoryManager.optimizeImageLoading();
-            
-            // Set up keyboard shortcuts
-            setupKeyboardShortcuts();
-            
-        }
-        
-        function initializeAdvancedFeatures() {
-            // Preload common amino acid data
-            preloadAminoAcidData();
-            
-            // Set up periodic cleanup
-            setInterval(() => {
-                if (literatureCache.size() > 20 || pdbCache.size() > 10) {
-                    MemoryManager.cleanupResources();
-                }
-            }, 300000); // Every 5 minutes
-        }
-        
         function setupKeyboardShortcuts() {
             document.addEventListener('keydown', function(e) {
                 // Enter key to load PDB
@@ -177,14 +148,6 @@
                     closePaperViewer();
                     resetMeasurement();
                 }
-            });
-        }
-        
-        function preloadAminoAcidData() {
-            // Preload common amino acids to reduce lookup time
-            const commonAminoAcids = ['ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE'];
-            commonAminoAcids.forEach(code => {
-                getAminoAcidData(code); // This will cache the data
             });
         }
         
@@ -301,29 +264,11 @@
             indicator.classList.remove('show', 'checking', 'valid');
         }
         
-        // Enhanced memory management utilities
+        // Cache eviction must never unload the structure being inspected.
         class MemoryManager {
             static cleanupResources() {
-                // Cache eviction must never unload the structure being inspected.
                 if (literatureCache.size() > 8) literatureCache.clear();
                 if (pdbCache.size() > 3) pdbCache.clear();
-            }
-            
-            static optimizeImageLoading() {
-                // Lazy load images
-                const images = document.querySelectorAll('img[data-src]');
-                const imageObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            img.src = img.dataset.src;
-                            img.removeAttribute('data-src');
-                            imageObserver.unobserve(img);
-                        }
-                    });
-                });
-                
-                images.forEach(img => imageObserver.observe(img));
             }
         }
         
@@ -453,7 +398,6 @@
                 viewer.removeAllLabels();
                 clearLiterature();
                 clearRawPdb();
-                selectedAtoms = [];
                 selectedResidue = null;
                 currentModel = candidate;
                 currentPdbId = pdbId;
@@ -579,7 +523,6 @@
                 viewer.removeAllModels();
                 throttledRender();
                 currentModel = null;
-                selectedAtoms = [];
                 currentPdbId = null;
                 proteinSequence = [];
                 populateMeasurementAtoms();
@@ -666,13 +609,11 @@
         }
         
         function handleAtomClick(atom) {
-            selectedAtoms = currentModel.selectedAtoms(residueSelection(atom));
             selectSequenceResidue({ chain: atom.chain || '', resi: atom.resi, icode: atom.icode || '', resn: atom.resn });
             showAminoAcidDetails(atom);
         }
         
         function clearAtomSelection() {
-            selectedAtoms = [];
             selectedResidue = null;
             document.querySelectorAll('.sequence-residue').forEach(button => button.setAttribute('aria-pressed', 'false'));
             updateStyle();
@@ -1272,11 +1213,9 @@
             $('#rawpdb-title').text('Raw PDB Data');
             $('#rawpdb-info').text('Load a structure to view formatted PDB data');
             $('#rawpdb-content').html('<div class="no-rawpdb"><div>No structure loaded</div><div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view formatted data</div></div>');
-            rawPdbData = null;
         }
 
         function displayRawPdb(pdbData, pdbId = null) {
-            rawPdbData = pdbData;
             const title = pdbId ? `Raw PDB Data - ${pdbId}` : 'Raw PDB Data - Uploaded File';
             $('#rawpdb-title').text(title);
             
@@ -1436,8 +1375,6 @@
                 fastGrid.filteredData = fastGrid.data.filter(row => row.recordType === recordType);
             }
             
-            fastGrid.currentFilter = recordType;
-            
             // reset scroll position
             fastGrid.viewport.scrollTop = 0;
             
@@ -1446,11 +1383,6 @@
             
             // update stats
             $('#grid-visible-count').text(fastGrid.filteredData.length);
-        }
-
-        function filterPdbRecords(recordType) {
-            // legacy function - redirect to fast grid
-            fastGridFilter(recordType);
         }
 
         // Atom table functions
@@ -1716,10 +1648,6 @@
             const chainFilter = document.getElementById('atom-chain-filter')?.value || 'all';
             const elementFilter = document.getElementById('atom-element-filter')?.value || 'all';
             
-            atomTable.currentTypeFilter = typeFilter;
-            atomTable.currentChainFilter = chainFilter;
-            atomTable.currentElementFilter = elementFilter;
-            
             // Apply filters
             atomTable.filteredData = atomTable.data.filter(atom => {
                 if (typeFilter !== 'all' && atom.recordType !== typeFilter) return false;
@@ -1826,8 +1754,4 @@
                 updateFastGridView();
             }, 50);
         }
-        
-        // Make zoom functions globally accessible for onclick handlers
-        window.zoomAtomTable = zoomAtomTable;
-        window.zoomPdbTable = zoomPdbTable;
         
