@@ -48,7 +48,7 @@
             }
         }
 
-        // RCSB metadata is text; escape it before building markup.
+        // PDB fields and RCSB metadata are text; escape them before building markup.
         function escapeHtml(value) {
             return String(value).replace(/[&<>"']/g, character => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -739,15 +739,15 @@
                 infoElement.innerHTML = `
                     <div class="info-item">
                         <span class="info-label">Full Name:</span>
-                        <span class="info-value">${residueName}</span>
+                        <span class="info-value">${escapeHtml(residueName)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Code:</span>
-                        <span class="info-value">${residueCode}</span>
+                        <span class="info-value">${escapeHtml(residueCode)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Chain:</span>
-                        <span class="info-value">${atom.chain || 'unknown'}</span>
+                        <span class="info-value">${escapeHtml(atom.chain || 'unknown')}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Position:</span>
@@ -1372,7 +1372,7 @@
                         <span style="font-size: 11px; color: #888;">Filter by record type:</span>
                         <select class="pdb-filter-dropdown" id="pdb-filter-select" aria-label="PDB record type" onchange="fastGridFilter(this.value)">
                             <option value="all">All Records</option>
-                            ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
+                            ${recordTypes.sort().map(type => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('')}
                         </select>
                         <span style="font-size: 11px; color: #888; margin-left: 15px;">Zoom:</span>
                         <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">🔍−</button>
@@ -1464,8 +1464,8 @@
             
             row.innerHTML = `
                 <div class="fast-grid-cell">${rowData.lineNumber}</div>
-                <div class="fast-grid-cell record-type ${recordClass}">${rowData.recordType}</div>
-                <div class="fast-grid-cell">${rowData.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                <div class="fast-grid-cell record-type ${recordClass}">${escapeHtml(rowData.recordType)}</div>
+                <div class="fast-grid-cell">${escapeHtml(rowData.content)}</div>
             `;
             
             return row;
@@ -1663,16 +1663,16 @@
             const chains = [...new Set(atomTable.data.map(atom => atom.chainId))].filter(Boolean).sort();
             const chainSelect = document.getElementById('atom-chain-filter');
             if (chainSelect) {
-                chainSelect.innerHTML = '<option value="all">All Chains</option>' +
-                    chains.map(chain => `<option value="${chain}">Chain ${chain}</option>`).join('');
+                chainSelect.replaceChildren(new Option('All Chains', 'all'),
+                    ...chains.map(chain => new Option(`Chain ${chain}`, chain)));
             }
             
             // Get unique elements
             const elements = [...new Set(atomTable.data.map(atom => atom.element))].filter(Boolean).sort();
             const elementSelect = document.getElementById('atom-element-filter');
             if (elementSelect) {
-                elementSelect.innerHTML = '<option value="all">All Elements</option>' +
-                    elements.map(element => `<option value="${element}">${element}</option>`).join('');
+                elementSelect.replaceChildren(new Option('All Elements', 'all'),
+                    ...elements.map(element => new Option(element, element)));
             }
         }
         
@@ -1771,16 +1771,16 @@
             row.innerHTML = `
                 <div class="atom-table-cell atom-serial">${atom.serial}</div>
                 <div class="atom-table-cell">${atom.recordType}</div>
-                <div class="atom-table-cell atom-name">${atom.atomName}</div>
-                <div class="atom-table-cell residue-name">${atom.resName}</div>
-                <div class="atom-table-cell chain-id">${atom.chainId || '-'}</div>
+                <div class="atom-table-cell atom-name">${escapeHtml(atom.atomName)}</div>
+                <div class="atom-table-cell residue-name">${escapeHtml(atom.resName)}</div>
+                <div class="atom-table-cell chain-id">${escapeHtml(atom.chainId || '-')}</div>
                 <div class="atom-table-cell">${atom.resSeq}${escapeHtml(atom.iCode)}</div>
                 <div class="atom-table-cell coordinate">${x}</div>
                 <div class="atom-table-cell coordinate">${y}</div>
                 <div class="atom-table-cell coordinate">${z}</div>
                 <div class="atom-table-cell factor">${atom.occupancy.toFixed(2)}</div>
                 <div class="atom-table-cell factor">${atom.tempFactor.toFixed(2)}</div>
-                <div class="atom-table-cell element">${atom.element}</div>
+                <div class="atom-table-cell element">${escapeHtml(atom.element)}</div>
             `;
             
             return row;

@@ -148,6 +148,21 @@ test('atom table residue numbers include insertion codes', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('markup characters in PDB fields are shown as text', async ({ page }) => {
+  const errors = collectErrors(page);
+  const atom = synthetic.split('\n')[0];
+  await loaded(page);
+  await dropPdb(page, ['REMARK   1 a &lt;b&gt; <i>c</i>', `${atom.slice(0, 12)}<i>  <b>${atom.slice(20)}`, 'END'].join('\n'), 'markup.pdb');
+  await expect(page.locator('#status-display')).toHaveText('markup.pdb loaded successfully');
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('.atom-table-row .atom-name')).toHaveText('<i>');
+  await expect(page.locator('.atom-table-row .residue-name')).toHaveText('<b>');
+  await page.getByRole('button', { name: 'Raw PDB', exact: true }).click();
+  await expect(page.locator('.fast-grid-row').first().locator('.fast-grid-cell').nth(2)).toContainText('a &lt;b&gt; <i>c</i>');
+  expect(await page.locator('#atom-table-content i, #atom-table-content b, #rawpdb-content i').count()).toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test('atom table keeps zero occupancy and infers a blank element column from the atom name', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
