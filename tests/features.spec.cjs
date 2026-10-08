@@ -77,6 +77,22 @@ test('sequence, keyboard atom measurement and share links restore real model sta
   expect(errors).toEqual([]);
 });
 
+test('canvas shortcuts center the view and leave modified browser shortcuts alone', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await page.locator('#viewer-container').focus();
+  const before = await page.evaluate(() => viewer.getView());
+  await page.keyboard.press('Control+Minus');
+  expect(await page.evaluate(() => viewer.getView())).toEqual(before);
+  await page.keyboard.press('Control+Equal');
+  expect(await page.evaluate(() => viewer.getView())).toEqual(before);
+  await page.keyboard.press('Control+c');
+  await expect(page.locator('#status-display')).toHaveText('1CRN (bundled) loaded successfully');
+  await page.keyboard.press('c');
+  await expect(page.locator('#status-display')).toHaveText('View centered');
+  expect(errors).toEqual([]);
+});
+
 test('drag and drop stays local, invalid input preserves the model, and Clear empties it', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);

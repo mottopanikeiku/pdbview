@@ -204,11 +204,6 @@
                     closePaperViewer();
                     resetMeasurement();
                 }
-                // Do not steal native Space/Enter from buttons and form controls.
-                if (e.key.toLowerCase() === 'c' && e.target.id === 'viewer-container') {
-                    e.preventDefault();
-                    centerView();
-                }
             });
         }
         
