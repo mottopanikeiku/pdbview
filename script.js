@@ -751,7 +751,7 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">Position:</span>
-                        <span class="info-value">${atom.resi || 'unknown'}</span>
+                        <span class="info-value">${escapeHtml(`${atom.resi ?? 'unknown'}${atom.icode || ''}`)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Type:</span>

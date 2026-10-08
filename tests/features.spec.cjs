@@ -163,6 +163,25 @@ test('markup characters in PDB fields are shown as text', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('residue details report residue zero and insertion codes', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, synthetic, 'identities.pdb');
+  await expect(page.locator('#status-display')).toHaveText('identities.pdb loaded successfully');
+  await page.selectOption('#style-select', 'sphere');
+  await page.locator('#interactive-btn').click();
+  // Interactive mode schedules its render on the next animation frame; pick after it.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const positions = await page.evaluate(() => viewer.modelToScreen(currentModel.selectedAtoms({})));
+  await page.mouse.click(positions[0].x, positions[0].y);
+  await expect(page.locator('#amino-acid-modal')).toBeVisible();
+  await expect(page.locator('#amino-acid-info')).toContainText('Position: 0');
+  await page.keyboard.press('Escape');
+  await page.mouse.click(positions[1].x, positions[1].y);
+  await expect(page.locator('#amino-acid-info')).toContainText('Position: 1A');
+  expect(errors).toEqual([]);
+});
+
 test('atom table keeps zero occupancy and infers a blank element column from the atom name', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
