@@ -610,6 +610,28 @@ button:active {
     -webkit-box-orient: vertical;
 }
 
+.paper-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.paper-link {
+    border-radius: 3px;
+    color: #111111;
+    font-size: 12px;
+    padding: 8px;
+    text-decoration: none;
+}
+
+.doi-link {
+    background: #51cf66;
+}
+
+.pubmed-link {
+    background: #4a9eff;
+}
+
 .loading-literature {
     display: flex;
     align-items: center;
@@ -873,11 +895,6 @@ button:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-.fast-grid-performance {
-    font-size: 9px;
-    color: #51cf66;
 }
 
 .line-number {
@@ -1251,6 +1268,7 @@ button:active {
 .sequence-chain > span { font-size: 12px; }
 button.sequence-residue { width: auto; min-width: 44px; min-height: 36px; padding: 5px; margin: 0; font-family: monospace; }
 button.sequence-residue[aria-pressed="true"] { color: #111; background: #ffdc55; }
+#interactive-btn[aria-pressed="true"], #measure-toggle[aria-pressed="true"] { background: #333333; border-color: #ffdc55; }
 :focus-visible { outline: 3px solid #ffdc55 !important; outline-offset: 2px; }
 #distance-result { display: block; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; margin-top: 8px; }
 .file-dragging .container { outline: 4px dashed #ffdc55; outline-offset: -5px; }

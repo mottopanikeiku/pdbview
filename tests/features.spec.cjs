@@ -77,6 +77,38 @@ test('sequence, keyboard atom measurement and share links restore real model sta
   expect(errors).toEqual([]);
 });
 
+test('canvas shortcuts center the view and leave modified browser shortcuts alone', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await page.locator('#viewer-container').focus();
+  const before = await page.evaluate(() => viewer.getView());
+  await page.keyboard.press('Control+Minus');
+  expect(await page.evaluate(() => viewer.getView())).toEqual(before);
+  await page.keyboard.press('Control+Equal');
+  expect(await page.evaluate(() => viewer.getView())).toEqual(before);
+  await page.keyboard.press('Control+c');
+  await expect(page.locator('#status-display')).toHaveText('1CRN (bundled) loaded successfully');
+  await page.keyboard.press('c');
+  await expect(page.locator('#status-display')).toHaveText('View centered');
+  expect(errors).toEqual([]);
+});
+
+test('the hidden atom table does not poll for layout', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  const calls = await page.evaluate(async () => {
+    let count = 0;
+    const original = updateAtomTableView;
+    window.updateAtomTableView = () => { count++; original(); };
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return count;
+  });
+  expect(calls).toBe(0);
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('.atom-table-row').first()).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('drag and drop stays local, invalid input preserves the model, and Clear empties it', async ({ page }) => {
   const errors = collectErrors(page);
   await loaded(page);
@@ -103,6 +135,25 @@ test('drag and drop stays local, invalid input preserves the model, and Clear em
   await expect(page.locator('#distance-result')).toHaveText('No atoms selected');
   expect(await page.evaluate(() => currentModel)).toBeNull();
   await axeClean(page);
+  expect(errors).toEqual([]);
+});
+
+test('a new load error stays visible for its full eight seconds', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.clock.install();
+  await loaded(page);
+  await page.clock.pauseAt(Date.now() + 1000);
+  const display = page.locator('#pdb-error-display');
+  await page.locator('#pdb-id').fill('AB');
+  await page.getByRole('button', { name: 'Load from Database' }).click();
+  await expect(display).toHaveText('PDB ID must be exactly 4 characters (letters and numbers only)');
+  await page.clock.fastForward(7000);
+  await dropPdb(page, 'not a structure');
+  await expect(display).toContainText('No atoms found');
+  await page.clock.fastForward(2000);
+  await expect(display).toHaveClass(/show/);
+  await page.clock.fastForward(7000);
+  await expect(display).not.toHaveClass(/show/);
   expect(errors).toEqual([]);
 });
 
@@ -134,6 +185,113 @@ test('canvas picking measures atoms and sequence identity includes blank chains 
   await page.keyboard.press('Escape');
   await expect(page.locator('#distance-result')).toHaveText('No atoms selected');
   expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(4);
+  expect(errors).toEqual([]);
+});
+
+test('atom table residue numbers include insertion codes', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, synthetic, 'identities.pdb');
+  await expect(page.locator('#status-display')).toHaveText('identities.pdb loaded successfully');
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('.atom-table-row')).toHaveCount(4);
+  await expect(page.locator('.atom-table-row .atom-table-cell:nth-child(6)')).toHaveText(['0', '1A', '1B', '1']);
+  expect(errors).toEqual([]);
+});
+
+test('markup characters in PDB fields are shown as text', async ({ page }) => {
+  const errors = collectErrors(page);
+  const atom = synthetic.split('\n')[0];
+  await loaded(page);
+  await dropPdb(page, ['REMARK   1 a &lt;b&gt; <i>c</i>', `${atom.slice(0, 12)}<i>  <b>${atom.slice(20)}`, 'END'].join('\n'), 'markup.pdb');
+  await expect(page.locator('#status-display')).toHaveText('markup.pdb loaded successfully');
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('.atom-table-row .atom-name')).toHaveText('<i>');
+  await expect(page.locator('.atom-table-row .residue-name')).toHaveText('<b>');
+  await page.getByRole('button', { name: 'Raw PDB', exact: true }).click();
+  await expect(page.locator('.fast-grid-row').first().locator('.fast-grid-cell').nth(2)).toContainText('a &lt;b&gt; <i>c</i>');
+  expect(await page.locator('#atom-table-content i, #atom-table-content b, #rawpdb-content i').count()).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('residue details report residue zero and insertion codes', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, synthetic, 'identities.pdb');
+  await expect(page.locator('#status-display')).toHaveText('identities.pdb loaded successfully');
+  await page.selectOption('#style-select', 'sphere');
+  await page.locator('#interactive-btn').click();
+  await expect(page.locator('#interactive-btn')).toHaveAttribute('aria-pressed', 'true');
+  // Interactive mode schedules its render on the next animation frame; pick after it.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const positions = await page.evaluate(() => viewer.modelToScreen(currentModel.selectedAtoms({})));
+  await page.mouse.click(positions[0].x, positions[0].y);
+  await expect(page.locator('#amino-acid-modal')).toBeVisible();
+  await expect(page.locator('#amino-acid-info')).toContainText('Position: 0');
+  await page.keyboard.press('Escape');
+  await page.mouse.click(positions[1].x, positions[1].y);
+  await expect(page.locator('#amino-acid-info')).toContainText('Position: 1A');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.locator('#interactive-btn')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#interactive-btn')).toHaveText('Interactive Mode: OFF');
+  expect(errors).toEqual([]);
+});
+
+test('the viewer uses the first model and alternate location while the Atoms tab lists every record', async ({ page }) => {
+  const errors = collectErrors(page);
+  const first = 'ATOM      1  CA  ALA A   1       0.000   0.000   0.000  1.00 10.00           C';
+  const altA = 'ATOM      2  CA AGLY A   2       3.800   0.000   0.000  0.50 10.00           C';
+  const altB = 'ATOM      3  CA BGLY A   2       3.900   0.100   0.000  0.50 10.00           C';
+  await loaded(page);
+  await dropPdb(page, ['MODEL        1', first, altA, altB, 'ENDMDL', 'MODEL        2', first, altA, altB, 'ENDMDL', 'END'].join('\n'), 'models.pdb');
+  await expect(page.locator('#status-display')).toHaveText('models.pdb loaded successfully');
+  expect(await page.evaluate(() => currentModel.selectedAtoms({}).map(atom => atom.serial))).toEqual([1, 2]);
+  await expect(page.locator('#atoms-info')).toHaveText('6 ATOM records, 0 HETATM records');
+  expect(errors).toEqual([]);
+});
+
+test('atom table keeps zero occupancy and infers a blank element column from the atom name', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await dropPdb(page, [
+    'ATOM      1  N   ALA A   1       1.000   2.000   3.000  0.00 15.00           N',
+    'HETATM    2 FE   HEM A 101       0.000   0.000   0.000  1.00 20.00            ',
+    'END'
+  ].join('\n'), 'columns.pdb');
+  await expect(page.locator('#status-display')).toHaveText('columns.pdb loaded successfully');
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  const rows = page.locator('.atom-table-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0).locator('.factor').first()).toHaveText('0.00');
+  await expect(rows.nth(0).locator('.element')).toHaveText('N');
+  await expect(rows.nth(1).locator('.element')).toHaveText('FE');
+  await expect(page.locator('#atom-element-filter option')).toHaveText(['All Elements', 'FE', 'N']);
+  expect(errors).toEqual([]);
+});
+
+test('atom filters survive tab switches and reset for a new structure', async ({ page }) => {
+  const errors = collectErrors(page);
+  await loaded(page);
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await page.selectOption('#atom-element-filter', 'S');
+  await expect(page.locator('#atom-stats')).toContainText('Showing 6 of 327 atoms');
+  await page.getByRole('button', { name: '3D View', exact: true }).click();
+  await page.getByRole('button', { name: 'Atoms', exact: true }).click();
+  await expect(page.locator('#atom-element-filter')).toHaveValue('S');
+  await expect(page.locator('#atom-stats')).toContainText('Showing 6 of 327 atoms');
+  await expect(page.locator('.atom-table-row')).toHaveCount(6);
+  await page.selectOption('#atom-type-filter', 'HETATM');
+  await dropPdb(page, pdb, 'replacement.pdb');
+  await expect(page.locator('#status-display')).toHaveText('replacement.pdb loaded successfully');
+  await expect(page.locator('#atom-type-filter')).toHaveValue('all');
+  await expect(page.locator('#atom-element-filter')).toHaveValue('all');
+  await expect(page.locator('#atom-stats')).toHaveText('327 atoms (327 ATOM, 0 HETATM)');
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(page.locator('#atom-stats')).toHaveText('No atoms loaded');
+  await expect(page.locator('#atom-element-filter option')).toHaveText(['All Elements']);
+  await expect(page.locator('.atom-table-row')).toHaveCount(0);
+  expect(await page.locator('#atom-table-content').evaluate(element => element.style.height)).toBe('');
   expect(errors).toEqual([]);
 });
 
@@ -186,7 +344,7 @@ test('live RCSB entry loads through the database controls', async ({ page }) => 
   expect(await page.evaluate(() => currentModel.selectedAtoms({}).length)).toBe(327);
   await page.getByRole('button', { name: 'Literature', exact: true }).click();
   await expect(page.locator('#literature-info')).toContainText('Found');
-  await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'PubMed', exact: true })).toBeVisible();
   await axeClean(page);
   expect(errors).toEqual([]);
 });
@@ -207,7 +365,8 @@ test('RCSB citation links and detail dialogs are keyboard accessible', async ({ 
   await page.goto('./?pdb=1CRN');
   await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
   await page.getByRole('button', { name: 'Literature', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'PubMed', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'PubMed', exact: true })).toHaveAttribute('href', 'https://pubmed.ncbi.nlm.nih.gov/16593516/');
+  await expect(page.getByRole('link', { name: 'View Paper', exact: true })).toHaveAttribute('href', 'https://doi.org/10.1073/pnas.81.19.6014');
   await axeClean(page);
   const title = page.getByRole('button', { name: 'Water structure of a hydrophobic protein at atomic resolution', exact: true });
   await title.focus();
@@ -218,6 +377,46 @@ test('RCSB citation links and detail dialogs are keyboard accessible', async ({ 
   await page.keyboard.press('Escape');
   await expect(page.locator('#paper-viewer')).not.toBeVisible();
   await expect(title).toBeFocused();
+  expect(errors).toEqual([]);
+});
+
+test('entries with more than five citations list every publication', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', body: pdb }));
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      citation: Array.from({ length: 7 }, (_, index) => ({ title: `Citation ${index + 1}`, rcsb_authors: ['Test author'], year: 2000 + index }))
+    }) }));
+  await page.goto('./?pdb=1CRN');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.locator('#literature-info')).toHaveText('Found 7 publication(s) related to 1CRN');
+  await expect(page.locator('.paper-item')).toHaveCount(7);
+  await page.getByRole('button', { name: 'Citation 7', exact: true }).click();
+  await expect(page.locator('#paper-viewer-title')).toHaveText('Citation 7');
+  expect(errors).toEqual([]);
+});
+
+test('citation metadata with markup characters is shown as text', async ({ page }) => {
+  const errors = collectErrors(page);
+  const title = 'Binding of Ca<sup>2+</sup> & <img src=x onerror="window.injected=1"> at pH < 5';
+  await page.route('https://files.rcsb.org/download/1CRN.pdb', route =>
+    route.fulfill({ contentType: 'text/plain', body: pdb }));
+  await page.route('https://data.rcsb.org/rest/v1/core/entry/1CRN', route =>
+    route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      citation: [{ title, rcsb_authors: ['O\'Brien, <b>A</b>'], pdbx_database_id_DOI: '10.1000/a"b\'c', year: 2020 }]
+    }) }));
+  await page.goto('./?pdb=1CRN');
+  await expect(page.locator('#status-display')).toHaveText('1CRN loaded successfully');
+  await page.getByRole('button', { name: 'Literature', exact: true }).click();
+  await expect(page.locator('.paper-title')).toHaveText(title);
+  await expect(page.locator('.paper-authors')).toHaveText('O\'Brien, <b>A</b>');
+  await expect(page.getByRole('link', { name: 'View Paper', exact: true })).toHaveAttribute('href', 'https://doi.org/10.1000/a"b\'c');
+  await page.locator('.paper-title').click();
+  await expect(page.locator('#paper-viewer h3')).toHaveText(title);
+  expect(await page.locator('#papers-list img, #paper-viewer img, #papers-list b').count()).toBe(0);
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
   expect(errors).toEqual([]);
 });
 
