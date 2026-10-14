@@ -11,19 +11,6 @@
                     timeout = setTimeout(later, wait);
                 };
             }
-            
-            static throttle(func, limit) {
-                let inThrottle;
-                return function() {
-                    const args = arguments;
-                    const context = this;
-                    if (!inThrottle) {
-                        func.apply(context, args);
-                        inThrottle = true;
-                        setTimeout(() => inThrottle = false, limit);
-                    }
-                }
-            }
         }
         
         // Enhanced cache manager with expiration
@@ -60,101 +47,19 @@
                 return this.cache.size;
             }
         }
-        
-        // Virtual scroll manager for literature
-        class VirtualScrollManager {
-            constructor(container, itemHeight = 120) {
-                this.container = container;
-                this.itemHeight = itemHeight;
-                this.items = [];
-                this.visibleItems = [];
-                this.startIndex = 0;
-                this.endIndex = 0;
-                this.buffer = 3;
-                this.scrollTop = 0;
-                
-                this.setupContainer();
-                this.bindEvents();
-            }
-            
-            setupContainer() {
-                this.container.innerHTML = `
-                    <div class="virtual-scroll-content"></div>
-                `;
-                this.content = this.container.querySelector('.virtual-scroll-content');
-            }
-            
-            bindEvents() {
-                this.container.addEventListener('scroll', 
-                    PerformanceManager.throttle(() => this.updateView(), 16)
-                );
-            }
-            
-            setItems(items) {
-                this.items = items;
-                this.content.style.height = `${items.length * this.itemHeight}px`;
-                this.updateView();
-            }
-            
-            updateView() {
-                const containerHeight = this.container.clientHeight;
-                const scrollTop = this.container.scrollTop;
-                
-                const visibleCount = Math.ceil(containerHeight / this.itemHeight) + this.buffer * 2;
-                this.startIndex = Math.max(0, Math.floor(scrollTop / this.itemHeight) - this.buffer);
-                this.endIndex = Math.min(this.items.length, this.startIndex + visibleCount);
-                
-                this.render();
-            }
-            
-            render() {
-                // Clear existing items
-                this.content.innerHTML = '';
-                
-                for (let i = this.startIndex; i < this.endIndex; i++) {
-                    const item = this.items[i];
-                    if (!item) continue;
-                    
-                    const element = this.createItemElement(item, i);
-                    element.style.top = `${i * this.itemHeight}px`;
-                    element.classList.add('virtual-scroll-item');
-                    this.content.appendChild(element);
-                }
-            }
-            
-            createItemElement(item, index) {
-                const div = document.createElement('div');
-                div.className = 'paper-item';
-                div.style.height = `${this.itemHeight - 12}px`; // Account for margin
-                
-                const authors = Array.isArray(item.authors) ? 
-                    item.authors.slice(0, 3).map(a => a.name || a).join(', ') + 
-                    (item.authors.length > 3 ? ' et al.' : '') : 
-                    (item.rcsb_authors || []).slice(0, 3).join(', ') + 
-                    (item.rcsb_authors && item.rcsb_authors.length > 3 ? ' et al.' : '');
-                
-                div.innerHTML = `
-                    <button class="paper-title" onclick="viewPaper(${index})">${item.title || 'Untitled'}</button>
-                    <div class="paper-authors">${authors || 'Unknown authors'}</div>
-                    <div class="paper-journal">${item.journal || 'Unknown journal'} ${item.year ? `(${item.year})` : ''}</div>
-                    <div class="paper-abstract">${item.abstract || 'No abstract available.'}</div>
-                    <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
-                        ${item.doi ? `<button onclick="window.open('https://doi.org/${item.doi}', '_blank')" style="background: #51cf66; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">View Paper</button>` : ''}
-                        ${item.pubmed_id ? `<button onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${item.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">PubMed</button>` : ''}
-                    </div>
-                `;
-                
-                return div;
-            }
+
+        // PDB fields and RCSB metadata are text; escape them before building markup.
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[character]);
         }
         
         // Global variables
         let viewer;
         let currentModel;
         let interactiveMode = false;
-        let selectedAtoms = [];
         let currentPdbId = null;
-        let rawPdbData = null;
         
         // Observed protein residues and the current highlighted residue.
         let proteinSequence = [];
@@ -164,60 +69,23 @@
         const literatureCache = new CacheManager(600000); // 10 minutes
         const pdbCache = new CacheManager(1800000); // 30 minutes
         
-        // Performance monitoring
-        class PerformanceMonitor {
-            static frameCount = 0;
-            static lastFPSUpdate = performance.now();
-            static currentFPS = 0;
-            
-            static trackRender() {
-                this.frameCount++;
-                const now = performance.now();
-                
-                if (now - this.lastFPSUpdate >= 1000) {
-                    this.currentFPS = Math.round((this.frameCount * 1000) / (now - this.lastFPSUpdate));
-                    this.frameCount = 0;
-                    this.lastFPSUpdate = now;
-                    
-                    // Warn if FPS drops too low
-                    if (this.currentFPS < 20) {
-                        console.warn(`Low FPS detected: ${this.currentFPS}`);
-                    }
-                }
-            }
-            
-            static getFPS() {
-                return this.currentFPS;
-            }
-        }
-        
-        // Virtual scroll manager
-        let virtualScrollManager = null;
-        
         // fast grid variables
         let fastGrid = {
             data: [],
             filteredData: [],
-            currentFilter: 'all',
-            visibleRows: [],
             rowHeight: 24,
             containerHeight: 0,
-            scrollTop: 0,
             startIndex: 0,
             endIndex: 0,
             buffer: 10,
             container: null,
-            viewport: null,
-            header: null
+            viewport: null
         };
         
         // atom table variables
         let atomTable = {
             data: [],
             filteredData: [],
-            currentTypeFilter: 'all',
-            currentChainFilter: 'all',
-            currentElementFilter: 'all',
             rowHeight: 22,
             containerHeight: 0,
             startIndex: 0,
@@ -239,13 +107,14 @@
                 loadBundledExample(true);
             }
             
-            // Initialize secondary features
-            initializeSecondaryFeatures();
+            setupKeyboardShortcuts();
             
-            // Initialize advanced features last
-            setTimeout(() => {
-                initializeAdvancedFeatures();
-            }, 500);
+            // Bound the in-memory download and publication caches.
+            setInterval(() => {
+                if (literatureCache.size() > 20 || pdbCache.size() > 10) {
+                    MemoryManager.cleanupResources();
+                }
+            }, 300000); // Every 5 minutes
             
             // Handle window resize for fast grid and atom table
             window.addEventListener('resize', PerformanceManager.debounce(() => {
@@ -266,33 +135,6 @@
             }, 100));
         });
         
-        function initializeSecondaryFeatures() {
-            // Initialize virtual scroll manager for literature
-            const papersListElement = document.getElementById('papers-list');
-            if (papersListElement) {
-                virtualScrollManager = new VirtualScrollManager(papersListElement);
-            }
-            
-            // Initialize image lazy loading
-            MemoryManager.optimizeImageLoading();
-            
-            // Set up keyboard shortcuts
-            setupKeyboardShortcuts();
-            
-        }
-        
-        function initializeAdvancedFeatures() {
-            // Preload common amino acid data
-            preloadAminoAcidData();
-            
-            // Set up periodic cleanup
-            setInterval(() => {
-                if (literatureCache.size() > 20 || pdbCache.size() > 10) {
-                    MemoryManager.cleanupResources();
-                }
-            }, 300000); // Every 5 minutes
-        }
-        
         function setupKeyboardShortcuts() {
             document.addEventListener('keydown', function(e) {
                 // Enter key to load PDB
@@ -306,19 +148,6 @@
                     closePaperViewer();
                     resetMeasurement();
                 }
-                // Do not steal native Space/Enter from buttons and form controls.
-                if (e.key.toLowerCase() === 'c' && e.target.id === 'viewer-container') {
-                    e.preventDefault();
-                    centerView();
-                }
-            });
-        }
-        
-        function preloadAminoAcidData() {
-            // Preload common amino acids to reduce lookup time
-            const commonAminoAcids = ['ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE'];
-            commonAminoAcids.forEach(code => {
-                getAminoAcidData(code); // This will cache the data
             });
         }
         
@@ -333,7 +162,6 @@
             renderAnimationFrame = requestAnimationFrame(() => {
                 if (viewer) {
                     viewer.render();
-                    PerformanceMonitor.trackRender();
                 }
                 isRenderScheduled = false;
             });
@@ -398,6 +226,7 @@
         }
         
         // Local PDB error display functions
+        let pdbErrorTimer;
         function showPdbError(message) {
             const errorDisplay = document.getElementById('pdb-error-display');
             if (!errorDisplay) return;
@@ -405,8 +234,9 @@
             errorDisplay.textContent = message;
             errorDisplay.classList.add('show');
             
-            // Auto-hide after 8 seconds
-            setTimeout(() => hidePdbError(), 8000);
+            // Auto-hide 8 seconds after the latest error, not an earlier one.
+            clearTimeout(pdbErrorTimer);
+            pdbErrorTimer = setTimeout(hidePdbError, 8000);
         }
         
         function hidePdbError() {
@@ -436,29 +266,11 @@
             indicator.classList.remove('show', 'checking', 'valid');
         }
         
-        // Enhanced memory management utilities
+        // Cache eviction must never unload the structure being inspected.
         class MemoryManager {
             static cleanupResources() {
-                // Cache eviction must never unload the structure being inspected.
                 if (literatureCache.size() > 8) literatureCache.clear();
                 if (pdbCache.size() > 3) pdbCache.clear();
-            }
-            
-            static optimizeImageLoading() {
-                // Lazy load images
-                const images = document.querySelectorAll('img[data-src]');
-                const imageObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            img.src = img.dataset.src;
-                            img.removeAttribute('data-src');
-                            imageObserver.unobserve(img);
-                        }
-                    });
-                });
-                
-                images.forEach(img => imageObserver.observe(img));
             }
         }
         
@@ -588,7 +400,6 @@
                 viewer.removeAllLabels();
                 clearLiterature();
                 clearRawPdb();
-                selectedAtoms = [];
                 selectedResidue = null;
                 currentModel = candidate;
                 currentPdbId = pdbId;
@@ -714,7 +525,6 @@
                 viewer.removeAllModels();
                 throttledRender();
                 currentModel = null;
-                selectedAtoms = [];
                 currentPdbId = null;
                 proteinSequence = [];
                 populateMeasurementAtoms();
@@ -734,7 +544,7 @@
                     const btn = document.getElementById('interactive-btn');
                     if (btn) {
                         btn.textContent = 'Interactive Mode: OFF';
-                        btn.style.background = '#2a2a2a';
+                        btn.setAttribute('aria-pressed', 'false');
                     }
                 }
                 
@@ -742,6 +552,7 @@
                 atomTable.data = [];
                 atomTable.filteredData = [];
                 atomTable.isParsing = false;
+                populateAtomFilters();
                 
                 // Reset atoms tab
                 const atomsTitle = document.getElementById('atoms-title');
@@ -751,8 +562,11 @@
                 if (atomsTitle) atomsTitle.textContent = 'Atom Data';
                 if (atomsInfo) atomsInfo.textContent = 'Load a structure to view atomic coordinates and properties';
                 if (atomsContent) {
+                    atomsContent.style.height = '';
                     atomsContent.innerHTML = '<div class="no-rawpdb"><div>No structure loaded</div><div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view atomic data</div></div>';
                 }
+                const atomStats = document.getElementById('atom-stats');
+                if (atomStats) atomStats.textContent = 'No atoms loaded';
                 
                 // Clean up resources
                 MemoryManager.cleanupResources();
@@ -776,12 +590,12 @@
             
             if (interactiveMode) {
                 btn.textContent = 'Interactive Mode: ON';
-                btn.style.background = '#333333';
+                btn.setAttribute('aria-pressed', 'true');
                 enableClickHandling();
                 showMessage('Interactive mode enabled - click on amino acids to explore', 'success');
             } else {
                 btn.textContent = 'Interactive Mode: OFF';
-                btn.style.background = '#2a2a2a';
+                btn.setAttribute('aria-pressed', 'false');
                 disableClickHandling();
                 closeAminoAcidModal();
                 showMessage('Interactive mode disabled', 'info');
@@ -800,13 +614,11 @@
         }
         
         function handleAtomClick(atom) {
-            selectedAtoms = currentModel.selectedAtoms(residueSelection(atom));
             selectSequenceResidue({ chain: atom.chain || '', resi: atom.resi, icode: atom.icode || '', resn: atom.resn });
             showAminoAcidDetails(atom);
         }
         
         function clearAtomSelection() {
-            selectedAtoms = [];
             selectedResidue = null;
             document.querySelectorAll('.sequence-residue').forEach(button => button.setAttribute('aria-pressed', 'false'));
             updateStyle();
@@ -840,19 +652,19 @@
                 infoElement.innerHTML = `
                     <div class="info-item">
                         <span class="info-label">Full Name:</span>
-                        <span class="info-value">${residueName}</span>
+                        <span class="info-value">${escapeHtml(residueName)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Code:</span>
-                        <span class="info-value">${residueCode}</span>
+                        <span class="info-value">${escapeHtml(residueCode)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Chain:</span>
-                        <span class="info-value">${atom.chain || 'unknown'}</span>
+                        <span class="info-value">${escapeHtml(atom.chain || 'unknown')}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Position:</span>
-                        <span class="info-value">${atom.resi || 'unknown'}</span>
+                        <span class="info-value">${escapeHtml(`${atom.resi ?? 'unknown'}${atom.icode || ''}`)}</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Type:</span>
@@ -1173,22 +985,18 @@
                 }, 100);
             }
             
-                    // if switching to atoms tab, initialize and update table
-        if (tabName === 'atoms') {
-            setTimeout(() => {
-                if (atomTable.data.length > 0) {
+            // if switching to atoms tab, initialize and update table
+            if (tabName === 'atoms') {
+                setTimeout(() => {
+                    if (atomTable.data.length === 0) return;
                     initializeAtomTable();
                     // Force dimension update after tab is fully visible
                     setTimeout(() => {
                         updateAtomTableDimensions();
                         updateAtomTableView();
                     }, 50);
-                    console.log('Atoms tab activated with data');
-                } else {
-                    console.log('Atoms tab activated but no data available');
-                }
-            }, 100);
-        }
+                }, 100);
+            }
         }
         
         // Literature functions
@@ -1264,15 +1072,7 @@
                 return;
             }
             
-            // Use virtual scrolling for better performance with many publications
-            if (virtualScrollManager && publications.length > 5) {
-                // Store publications globally for viewPaper function access
-                window.currentPublications = publications;
-                virtualScrollManager.setItems(publications);
-            } else {
-                // Use regular rendering for small lists
-                displayLiteratureRegular(publications, listElement);
-            }
+            displayLiteratureRegular(publications, listElement);
         }
         
         function displayLiteratureRegular(publications, container) {
@@ -1291,13 +1091,13 @@
                 paperItem.className = 'paper-item';
                 
                 paperItem.innerHTML = `
-                    <button class="paper-title" onclick="viewPaper(${index})">${pub.title || 'Untitled'}</button>
-                    <div class="paper-authors">${authors || 'Unknown authors'}</div>
-                    <div class="paper-journal">${pub.journal || 'Unknown journal'} ${pub.year ? `(${pub.year})` : ''}</div>
-                    <div class="paper-abstract">${pub.abstract || 'No abstract available.'}</div>
-                    <div class="paper-actions" style="margin-top: 8px; display: flex; gap: 8px;">
-                        ${pub.doi ? `<button onclick="window.open('https://doi.org/${pub.doi}', '_blank')" style="background: #51cf66; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">View Paper</button>` : ''}
-                        ${pub.pubmed_id ? `<button onclick="window.open('https://pubmed.ncbi.nlm.nih.gov/${pub.pubmed_id}/', '_blank')" style="background: #4a9eff; border: none; color: #111; padding: 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">PubMed</button>` : ''}
+                    <button class="paper-title" onclick="viewPaper(${index})">${escapeHtml(pub.title || 'Untitled')}</button>
+                    <div class="paper-authors">${escapeHtml(authors || 'Unknown authors')}</div>
+                    <div class="paper-journal">${escapeHtml(pub.journal || 'Unknown journal')} ${pub.year ? `(${escapeHtml(pub.year)})` : ''}</div>
+                    <div class="paper-abstract">${escapeHtml(pub.abstract || 'No abstract available.')}</div>
+                    <div class="paper-actions">
+                        ${pub.doi ? `<a class="paper-link doi-link" href="https://doi.org/${escapeHtml(pub.doi)}" target="_blank" rel="noopener">View Paper</a>` : ''}
+                        ${pub.pubmed_id ? `<a class="paper-link pubmed-link" href="https://pubmed.ncbi.nlm.nih.gov/${escapeHtml(pub.pubmed_id)}/" target="_blank" rel="noopener">PubMed</a>` : ''}
                     </div>
                 `;
                 
@@ -1349,35 +1149,34 @@
             }
             
             if (bodyElement) {
+                const authors = Array.isArray(paper.authors) ?
+                    paper.authors.map(a => a.name || a).join(', ') :
+                    (paper.rcsb_authors || []).join(', ') || 'Unknown authors';
                 const content = `
                     <div class="paper-detail">
-                        <h3>${paper.title || 'Untitled'}</h3>
+                        <h3>${escapeHtml(paper.title || 'Untitled')}</h3>
                         
                         <div class="detail-section">
                             <div class="detail-label">Authors</div>
-                            <div class="detail-value">
-                                ${Array.isArray(paper.authors) ? 
-                                    paper.authors.map(a => a.name || a).join(', ') : 
-                                    (paper.rcsb_authors || []).join(', ') || 'Unknown authors'}
-                            </div>
+                            <div class="detail-value">${escapeHtml(authors)}</div>
                         </div>
                         
                         <div class="detail-section">
                             <div class="detail-label">Journal</div>
-                            <div class="detail-value">${paper.journal || 'Unknown journal'}</div>
+                            <div class="detail-value">${escapeHtml(paper.journal || 'Unknown journal')}</div>
                         </div>
                         
                         <div class="detail-section">
                             <div class="detail-label">Year</div>
-                            <div class="detail-value">${paper.year || 'Unknown'}</div>
+                            <div class="detail-value">${escapeHtml(paper.year || 'Unknown')}</div>
                         </div>
                         
                         ${paper.doi ? `
                             <div class="detail-section">
                                 <div class="detail-label">DOI</div>
                                 <div class="detail-value">
-                                    <a href="https://doi.org/${paper.doi}" target="_blank" style="color: #51cf66;">
-                                        ${paper.doi}
+                                    <a href="https://doi.org/${escapeHtml(paper.doi)}" target="_blank" rel="noopener" style="color: #51cf66;">
+                                        ${escapeHtml(paper.doi)}
                                     </a>
                                 </div>
                             </div>
@@ -1387,8 +1186,8 @@
                             <div class="detail-section">
                                 <div class="detail-label">PubMed ID</div>
                                 <div class="detail-value">
-                                    <a href="https://pubmed.ncbi.nlm.nih.gov/${paper.pubmed_id}/" target="_blank" style="color: #51cf66;">
-                                        ${paper.pubmed_id}
+                                    <a href="https://pubmed.ncbi.nlm.nih.gov/${escapeHtml(paper.pubmed_id)}/" target="_blank" rel="noopener" style="color: #51cf66;">
+                                        ${escapeHtml(paper.pubmed_id)}
                                     </a>
                                 </div>
                             </div>
@@ -1398,7 +1197,7 @@
                             <div class="detail-section">
                                 <div class="detail-label">Abstract</div>
                                 <div class="detail-value" style="line-height: 1.6; color: #cccccc;">
-                                    ${paper.abstract}
+                                    ${escapeHtml(paper.abstract)}
                                 </div>
                             </div>
                         ` : ''}
@@ -1419,11 +1218,9 @@
             $('#rawpdb-title').text('Raw PDB Data');
             $('#rawpdb-info').text('Load a structure to view formatted PDB data');
             $('#rawpdb-content').html('<div class="no-rawpdb"><div>No structure loaded</div><div style="margin-top: 5px; font-size: 10px;">Load a PDB structure to view formatted data</div></div>');
-            rawPdbData = null;
         }
 
         function displayRawPdb(pdbData, pdbId = null) {
-            rawPdbData = pdbData;
             const title = pdbId ? `Raw PDB Data - ${pdbId}` : 'Raw PDB Data - Uploaded File';
             $('#rawpdb-title').text(title);
             
@@ -1460,8 +1257,6 @@
 
         // fast grid implementation inspired by gabrielpetersson/fast-grid
         function initializeFastPdbGrid(lines) {
-            const startTime = performance.now();
-            
             // parse data
             fastGrid.data = lines.map((line, index) => ({
                 lineNumber: index + 1,
@@ -1482,7 +1277,7 @@
                         <span style="font-size: 11px; color: #888;">Filter by record type:</span>
                         <select class="pdb-filter-dropdown" id="pdb-filter-select" aria-label="PDB record type" onchange="fastGridFilter(this.value)">
                             <option value="all">All Records</option>
-                            ${recordTypes.sort().map(type => `<option value="${type}">${type}</option>`).join('')}
+                            ${recordTypes.sort().map(type => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('')}
                         </select>
                         <span style="font-size: 11px; color: #888; margin-left: 15px;">Zoom:</span>
                         <button class="zoom-btn" onclick="zoomPdbTable('out')" title="Zoom Out">🔍−</button>
@@ -1491,7 +1286,6 @@
                     </div>
                     <div class="fast-grid-stats">
                         <span>Showing <span id="grid-visible-count">${fastGrid.filteredData.length}</span> of ${fastGrid.data.length} records</span>
-                        <span class="fast-grid-performance" id="grid-performance">120 FPS</span>
                     </div>
                     <div class="fast-grid-header">
                         <div class="fast-grid-header-cell">Line</div>
@@ -1520,9 +1314,6 @@
             // initial render
             updateFastGridDimensions();
             updateFastGridView();
-            
-            const loadTime = (performance.now() - startTime).toFixed(1);
-            $('#grid-performance').text(`Loaded in ${loadTime}ms`);
         }
 
         function updateFastGridDimensions() {
@@ -1530,7 +1321,6 @@
             // Account for zoom level - when zoomed out (smaller %), we can see more rows
             const effectiveHeight = fastGrid.containerHeight * (100 / pdbZoomLevel);
             fastGrid.visibleRowCount = Math.ceil(effectiveHeight / fastGrid.rowHeight) + fastGrid.buffer;
-            console.log(`PDB Grid: zoom=${pdbZoomLevel}%, height=${fastGrid.containerHeight}px, effective=${effectiveHeight.toFixed(1)}px, visibleRows=${fastGrid.visibleRowCount}`);
         }
 
         function updateFastGridView() {
@@ -1558,11 +1348,6 @@
                 const rowElement = createFastGridRow(row, i);
                 fastGrid.container.appendChild(rowElement);
             }
-            
-            // update performance indicator
-            const fps = Math.min(120, 1000 / (performance.now() - (fastGrid.lastRender || performance.now())));
-            $('#grid-performance').text(`${Math.round(fps)} FPS`);
-            fastGrid.lastRender = performance.now();
         }
 
         function createFastGridRow(rowData, index) {
@@ -1574,16 +1359,14 @@
             
             row.innerHTML = `
                 <div class="fast-grid-cell">${rowData.lineNumber}</div>
-                <div class="fast-grid-cell record-type ${recordClass}">${rowData.recordType}</div>
-                <div class="fast-grid-cell">${rowData.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                <div class="fast-grid-cell record-type ${recordClass}">${escapeHtml(rowData.recordType)}</div>
+                <div class="fast-grid-cell">${escapeHtml(rowData.content)}</div>
             `;
             
             return row;
         }
 
         function fastGridFilter(recordType) {
-            const startTime = performance.now();
-            
             // update dropdown selection
             const dropdown = document.getElementById('pdb-filter-select');
             if (dropdown && dropdown.value !== recordType) {
@@ -1597,8 +1380,6 @@
                 fastGrid.filteredData = fastGrid.data.filter(row => row.recordType === recordType);
             }
             
-            fastGrid.currentFilter = recordType;
-            
             // reset scroll position
             fastGrid.viewport.scrollTop = 0;
             
@@ -1607,23 +1388,12 @@
             
             // update stats
             $('#grid-visible-count').text(fastGrid.filteredData.length);
-            
-            const filterTime = (performance.now() - startTime).toFixed(1);
-            $('#grid-performance').text(`Filtered in ${filterTime}ms`);
-        }
-
-        function filterPdbRecords(recordType) {
-            // legacy function - redirect to fast grid
-            fastGridFilter(recordType);
         }
 
         // Atom table functions
         function parseAtomData(pdbData) {
             // Prevent duplicate parsing
-            if (atomTable.isParsing) {
-                console.log('parseAtomData called while already parsing, skipping...');
-                return;
-            }
+            if (atomTable.isParsing) return;
             
             atomTable.isParsing = true;
             const lines = pdbData.split('\n');
@@ -1631,8 +1401,6 @@
             // Clear any existing atom data to prevent duplication
             atomTable.data = [];
             atomTable.filteredData = [];
-            
-            console.log(`Starting parseAtomData with ${lines.length} lines`);
             
             lines.forEach((line, index) => {
                 // Skip empty lines
@@ -1649,6 +1417,8 @@
                         }
                         
                         // Parse PDB ATOM/HETATM record format
+                        // Blank occupancy defaults to 1.0; a recorded 0.00 must stay zero.
+                        const occupancy = parseFloat(line.substring(54, 60));
                         const atomRecord = {
                             lineNumber: index + 1,
                             recordType: recordType,
@@ -1662,9 +1432,9 @@
                             x: parseFloat(line.substring(30, 38).trim()) || 0.0,
                             y: parseFloat(line.substring(38, 46).trim()) || 0.0,
                             z: parseFloat(line.substring(46, 54).trim()) || 0.0,
-                            occupancy: line.length >= 60 ? (parseFloat(line.substring(54, 60).trim()) || 1.0) : 1.0,
+                            occupancy: Number.isNaN(occupancy) ? 1.0 : occupancy,
                             tempFactor: line.length >= 66 ? (parseFloat(line.substring(60, 66).trim()) || 0.0) : 0.0,
-                            element: line.length >= 78 ? line.substring(76, 78).trim() : 
+                            element: line.substring(76, 78).trim() ||
                                     line.substring(12, 14).trim().replace(/[0-9]/g, '').trim(),
                             charge: line.length >= 80 ? line.substring(78, 80).trim() : ''
                         };
@@ -1687,8 +1457,6 @@
             const atomCount = atomTable.data.filter(a => a.recordType === 'ATOM').length;
             const hetatmCount = atomTable.data.filter(a => a.recordType === 'HETATM').length;
             
-            console.log(`Parsed ${atomTable.data.length} total atom records: ${atomCount} ATOM, ${hetatmCount} HETATM`);
-            
             // Update atoms tab with data
             const atomsTitle = document.getElementById('atoms-title');
             const atomsInfo = document.getElementById('atoms-info');
@@ -1707,7 +1475,8 @@
                 atomsContent.innerHTML = '';
             }
             
-            // Initialize the atom table and update stats after parsing
+            // New data gets fresh filter choices; switching tabs keeps the user's filters.
+            populateAtomFilters();
             if (atomTable.data.length > 0) {
                 initializeAtomTable();
             }
@@ -1752,34 +1521,32 @@
             // Store the handler for cleanup
             atomTable.scrollHandler = scrollHandler;
             
-            // Initialize filter options
-            populateAtomFilters();
-            
             // Wait for layout to stabilize before initial render
             requestAnimationFrame(() => {
                 updateAtomTableDimensions();
                 updateAtomTableView();
                 updateAtomStats();
             });
-            
-            console.log(`Initialized atom table with ${atomTable.data.length} atoms`);
         }
         
         function populateAtomFilters() {
+            const typeSelect = document.getElementById('atom-type-filter');
+            if (typeSelect) typeSelect.value = 'all';
+            
             // Get unique chains
             const chains = [...new Set(atomTable.data.map(atom => atom.chainId))].filter(Boolean).sort();
             const chainSelect = document.getElementById('atom-chain-filter');
             if (chainSelect) {
-                chainSelect.innerHTML = '<option value="all">All Chains</option>' +
-                    chains.map(chain => `<option value="${chain}">Chain ${chain}</option>`).join('');
+                chainSelect.replaceChildren(new Option('All Chains', 'all'),
+                    ...chains.map(chain => new Option(`Chain ${chain}`, chain)));
             }
             
             // Get unique elements
             const elements = [...new Set(atomTable.data.map(atom => atom.element))].filter(Boolean).sort();
             const elementSelect = document.getElementById('atom-element-filter');
             if (elementSelect) {
-                elementSelect.innerHTML = '<option value="all">All Elements</option>' +
-                    elements.map(element => `<option value="${element}">${element}</option>`).join('');
+                elementSelect.replaceChildren(new Option('All Elements', 'all'),
+                    ...elements.map(element => new Option(element, element)));
             }
         }
         
@@ -1792,8 +1559,6 @@
             atomTable.viewport.style.display = '';
             
             atomTable.containerHeight = atomTable.viewport.clientHeight;
-            
-            console.log(`Atom table viewport dimensions: ${atomTable.viewport.clientWidth}x${atomTable.containerHeight}`);
             
             // If still no height, try to get from parent
             if (atomTable.containerHeight === 0) {
@@ -1819,17 +1584,12 @@
             const viewportHeight = atomTable.viewport.clientHeight;
             const totalHeight = atomTable.filteredData.length * atomTable.rowHeight;
             
-            // Ensure viewport has proper height
-            if (viewportHeight === 0) {
-                console.log('Viewport height is 0, deferring update');
-                setTimeout(() => updateAtomTableView(), 50);
-                return;
-            }
+            // A hidden tab has no height; switchTab('atoms') renders once it is visible.
+            if (viewportHeight === 0) return;
             
             // Calculate visible range - account for zoom level (smaller % = more rows visible)
             const effectiveHeight = viewportHeight * (100 / atomZoomLevel);
             const visibleRows = Math.ceil(effectiveHeight / atomTable.rowHeight);
-            console.log(`Atom Table: zoom=${atomZoomLevel}%, viewport=${viewportHeight}px, effective=${effectiveHeight.toFixed(1)}px, visibleRows=${visibleRows}`);
             const startRow = Math.floor(scrollTop / atomTable.rowHeight);
             const endRow = Math.min(atomTable.filteredData.length - 1, startRow + visibleRows);
             
@@ -1858,11 +1618,6 @@
             }
             
             atomTable.container.appendChild(fragment);
-            
-            // Debug info (only log occasionally to avoid spam)
-            if (Math.random() < 0.1) {
-                console.log(`Atom table: rows ${atomTable.startIndex}-${atomTable.endIndex} of ${atomTable.filteredData.length}, viewport: ${viewportHeight}px, scroll: ${scrollTop}px`);
-            }
         }
         
         function createAtomTableRow(atom, index) {
@@ -1878,16 +1633,16 @@
             row.innerHTML = `
                 <div class="atom-table-cell atom-serial">${atom.serial}</div>
                 <div class="atom-table-cell">${atom.recordType}</div>
-                <div class="atom-table-cell atom-name">${atom.atomName}</div>
-                <div class="atom-table-cell residue-name">${atom.resName}</div>
-                <div class="atom-table-cell chain-id">${atom.chainId || '-'}</div>
-                <div class="atom-table-cell">${atom.resSeq}</div>
+                <div class="atom-table-cell atom-name">${escapeHtml(atom.atomName)}</div>
+                <div class="atom-table-cell residue-name">${escapeHtml(atom.resName)}</div>
+                <div class="atom-table-cell chain-id">${escapeHtml(atom.chainId || '-')}</div>
+                <div class="atom-table-cell">${atom.resSeq}${escapeHtml(atom.iCode)}</div>
                 <div class="atom-table-cell coordinate">${x}</div>
                 <div class="atom-table-cell coordinate">${y}</div>
                 <div class="atom-table-cell coordinate">${z}</div>
                 <div class="atom-table-cell factor">${atom.occupancy.toFixed(2)}</div>
                 <div class="atom-table-cell factor">${atom.tempFactor.toFixed(2)}</div>
-                <div class="atom-table-cell element">${atom.element}</div>
+                <div class="atom-table-cell element">${escapeHtml(atom.element)}</div>
             `;
             
             return row;
@@ -1898,10 +1653,6 @@
             const chainFilter = document.getElementById('atom-chain-filter')?.value || 'all';
             const elementFilter = document.getElementById('atom-element-filter')?.value || 'all';
             
-            atomTable.currentTypeFilter = typeFilter;
-            atomTable.currentChainFilter = chainFilter;
-            atomTable.currentElementFilter = elementFilter;
-            
             // Apply filters
             atomTable.filteredData = atomTable.data.filter(atom => {
                 if (typeFilter !== 'all' && atom.recordType !== typeFilter) return false;
@@ -1909,8 +1660,6 @@
                 if (elementFilter !== 'all' && atom.element !== elementFilter) return false;
                 return true;
             });
-            
-            console.log(`Filtered atoms: ${atomTable.filteredData.length} of ${atomTable.data.length}`);
             
             // Update stats immediately - before view update
             updateAtomStats();
@@ -1926,10 +1675,7 @@
         
         function updateAtomStats() {
             const statsElement = document.getElementById('atom-stats');
-            if (!statsElement) {
-                console.warn('Stats element not found');
-                return;
-            }
+            if (!statsElement) return;
             
             const totalAtoms = atomTable.data.length;
             const filteredAtoms = atomTable.filteredData.length;
@@ -1946,30 +1692,6 @@
             }
             
             statsElement.textContent = statsText;
-            console.log('Stats updated:', statsText);
-        }
-        
-        // Debug function to check atom table state
-        function debugAtomTable() {
-            console.log('=== Atom Table Debug ===');
-            console.log('Data length:', atomTable.data.length);
-            console.log('Filtered data length:', atomTable.filteredData.length);
-            console.log('Viewport element:', atomTable.viewport);
-            console.log('Container element:', atomTable.container);
-            
-            if (atomTable.viewport) {
-                console.log('Viewport height:', atomTable.viewport.clientHeight);
-                console.log('Viewport scroll:', atomTable.viewport.scrollTop);
-            }
-            
-            if (atomTable.container) {
-                console.log('Container height:', atomTable.container.style.height);
-                console.log('Container children:', atomTable.container.children.length);
-            }
-            
-            console.log('Start index:', atomTable.startIndex);
-            console.log('End index:', atomTable.endIndex);
-            console.log('========================');
         }
         
         // Zoom functionality for tables
@@ -1977,23 +1699,15 @@
         let pdbZoomLevel = 100;
         
         function zoomAtomTable(direction) {
-            console.log(`🔍 zoomAtomTable called with direction: ${direction}`);
-            console.log(`Current atomZoomLevel: ${atomZoomLevel}%`);
-            
             if (direction === 'in') {
                 atomZoomLevel = Math.min(200, atomZoomLevel + 25);
             } else if (direction === 'out') {
                 atomZoomLevel = Math.max(50, atomZoomLevel - 25);
             }
             
-            console.log(`New atomZoomLevel: ${atomZoomLevel}%`);
-            
             // Apply transform to the parent container to maintain header alignment
             const container = document.querySelector('.atom-table-container');
             const levelDisplay = document.getElementById('atom-zoom-level');
-            
-            console.log('Container found:', !!container);
-            console.log('Level display found:', !!levelDisplay);
             
             if (container) {
                 container.style.transform = `scale(${atomZoomLevel / 100})`;
@@ -2002,43 +1716,29 @@
                 container.style.display = 'none';
                 container.offsetHeight; // Trigger reflow
                 container.style.display = '';
-                console.log(`✅ Atom table zoom applied: ${atomZoomLevel}%`);
-            } else {
-                console.error('❌ Atom table container not found!');
             }
             
             if (levelDisplay) {
                 levelDisplay.textContent = `${atomZoomLevel}%`;
-            } else {
-                console.error('❌ Atom zoom level display not found!');
             }
             
             // Recalculate and update view to show proper number of rows for new zoom level
             setTimeout(() => {
-                console.log('🔄 Updating atom table view after zoom...');
                 updateAtomTableDimensions();
                 updateAtomTableView();
             }, 50);
         }
         
         function zoomPdbTable(direction) {
-            console.log(`🔍 zoomPdbTable called with direction: ${direction}`);
-            console.log(`Current pdbZoomLevel: ${pdbZoomLevel}%`);
-            
             if (direction === 'in') {
                 pdbZoomLevel = Math.min(200, pdbZoomLevel + 25);
             } else if (direction === 'out') {
                 pdbZoomLevel = Math.max(50, pdbZoomLevel - 25);
             }
             
-            console.log(`New pdbZoomLevel: ${pdbZoomLevel}%`);
-            
             // Apply transform to the parent container to maintain header alignment
             const container = document.querySelector('.fast-grid-container');
             const levelDisplay = document.getElementById('pdb-zoom-level');
-            
-            console.log('PDB Container found:', !!container);
-            console.log('PDB Level display found:', !!levelDisplay);
             
             if (container) {
                 container.style.transform = `scale(${pdbZoomLevel / 100})`;
@@ -2047,26 +1747,16 @@
                 container.style.display = 'none';
                 container.offsetHeight; // Trigger reflow
                 container.style.display = '';
-                console.log(`✅ PDB table zoom applied: ${pdbZoomLevel}%`);
-            } else {
-                console.error('❌ PDB table container not found!');
             }
             
             if (levelDisplay) {
                 levelDisplay.textContent = `${pdbZoomLevel}%`;
-            } else {
-                console.error('❌ PDB zoom level display not found!');
             }
             
             // Recalculate and update view to show proper number of rows for new zoom level
             setTimeout(() => {
-                console.log('🔄 Updating PDB grid view after zoom...');
                 updateFastGridDimensions();
                 updateFastGridView();
             }, 50);
         }
-        
-        // Make zoom functions globally accessible for onclick handlers
-        window.zoomAtomTable = zoomAtomTable;
-        window.zoomPdbTable = zoomPdbTable;
         
