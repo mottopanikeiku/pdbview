@@ -116,7 +116,7 @@ function pickMeasurementAtom(atom) {
     }
     measurementAtoms.push(atom);
     if (measurementAtoms.length === 1) {
-        document.getElementById('distance-result').textContent = `First atom: ${atomDescription(atom)}. Pick a second atom.`;
+        document.getElementById('distance-result').textContent = `First atom is ${atomDescription(atom)}, so now pick a second one.`;
     } else drawMeasurement();
 }
 
@@ -153,7 +153,7 @@ function shareView() {
     const note = document.getElementById('share-note');
     if (!currentModel || structureSource === 'local') {
         field.value = '';
-        note.textContent = 'Local files stay on your device. Load an RCSB entry or the bundled example to share a view.';
+        note.textContent = 'Local files stay on your device, so load an RCSB entry or the bundled example to share a view.';
         return;
     }
     const url = new URL(location.href);

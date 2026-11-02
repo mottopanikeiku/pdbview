@@ -442,7 +442,7 @@
                 return;
             }
             if (file.size > 50 * 1024 * 1024) {
-                showPdbError('File too large. Please select a file smaller than 50MB');
+                showPdbError('That file is too large, so please select one smaller than 50MB');
                 return;
             }
             const request = ++structureRequest;
@@ -592,7 +592,7 @@
                 btn.textContent = 'Interactive Mode: ON';
                 btn.setAttribute('aria-pressed', 'true');
                 enableClickHandling();
-                showMessage('Interactive mode enabled - click on amino acids to explore', 'success');
+                showMessage('Interactive mode is on, so click on amino acids to explore', 'success');
             } else {
                 btn.textContent = 'Interactive Mode: OFF';
                 btn.setAttribute('aria-pressed', 'false');
@@ -703,19 +703,19 @@
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚â‚ƒ-NH-C(NHâ‚‚)â‚‚âº)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Positively charged, basic',
-                    description: 'Arginine has a positively charged guanidino group, making it basic and hydrophilic. Often found on protein surfaces and involved in binding negatively charged molecules.'
+                    description: 'Arginine has a positively charged guanidino group that makes it basic and hydrophilic, and it is often found on protein surfaces, where it helps bind negatively charged molecules.'
                 },
                 'ASN': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-CONHâ‚‚)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Polar, uncharged',
-                    description: 'Asparagine has an amide group that can form hydrogen bonds. Common in protein surfaces and often involved in protein-protein interactions.'
+                    description: 'Asparagine has an amide group that can form hydrogen bonds, and it is common on protein surfaces and often involved in protein-protein interactions.'
                 },
                 'ASP': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-COOâ»)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Negatively charged, acidic',
-                    description: 'Aspartic acid has a carboxyl group that is negatively charged at physiological pH. Often found on protein surfaces and involved in binding positively charged molecules.'
+                    description: 'Aspartic acid has a carboxyl group that is negatively charged at physiological pH, and it is often found on protein surfaces, where it helps bind positively charged molecules.'
                 },
                 'CYS': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-SH)-COOâ»',
@@ -727,139 +727,139 @@
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚â‚‚-CONHâ‚‚)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Polar, uncharged',
-                    description: 'Glutamine has an amide group and is similar to asparagine but with a longer side chain. Important for protein folding and stability.'
+                    description: 'Glutamine has an amide group and is similar to asparagine but with a longer side chain, and it is important for protein folding and stability.'
                 },
                 'GLU': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚â‚‚-COOâ»)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Negatively charged, acidic',
-                    description: 'Glutamic acid is similar to aspartic acid but with a longer side chain. Key in enzyme active sites and protein-protein interactions.'
+                    description: 'Glutamic acid is similar to aspartic acid but with a longer side chain, and it plays a key part in enzyme active sites and protein-protein interactions.'
                 },
                 'GLY': {
                     structure: 'Hâ‚ƒNâº-CHâ‚‚-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Flexible, smallest',
-                    description: 'Glycine is the smallest amino acid with just a hydrogen atom as its side chain. Provides flexibility in protein structures and often found in turns.'
+                    description: 'Glycine is the smallest amino acid, with just a hydrogen atom as its side chain, so it gives protein structures flexibility and is often found in turns.'
                 },
                 'HIS': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-imidazole)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Positively charged, basic',
-                    description: 'Histidine has an imidazole ring that can be positively charged. Often found in enzyme active sites due to its ability to donate and accept protons.'
+                    description: 'Histidine has an imidazole ring that can be positively charged, and because it can donate and accept protons it is often found in enzyme active sites.'
                 },
                 'ILE': {
                     structure: 'Hâ‚ƒNâº-CH(CH(CHâ‚ƒ)CHâ‚‚CHâ‚ƒ)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Nonpolar, hydrophobic',
-                    description: 'Isoleucine is a branched, hydrophobic amino acid. Important for protein structure and commonly found in the hydrophobic core of proteins.'
+                    description: 'Isoleucine is a branched, hydrophobic amino acid that is important for protein structure and commonly found in the hydrophobic core of proteins.'
                 },
                 'LEU': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚CH(CHâ‚ƒ)â‚‚)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Nonpolar, hydrophobic',
-                    description: 'Leucine is a branched, hydrophobic amino acid. Very common in proteins and important for maintaining protein structure through hydrophobic interactions.'
+                    description: 'Leucine is a branched, hydrophobic amino acid that is very common in proteins and helps maintain protein structure through hydrophobic interactions.'
                 },
                 'LYS': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚â‚„-NHâ‚ƒâº)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Positively charged, basic',
-                    description: 'Lysine has a positively charged amino group. Often found on protein surfaces and involved in binding DNA and other negatively charged molecules.'
+                    description: 'Lysine has a positively charged amino group, and it is often found on protein surfaces, where it helps bind DNA and other negatively charged molecules.'
                 },
                 'MET': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚â‚‚-S-CHâ‚ƒ)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Nonpolar, hydrophobic',
-                    description: 'Methionine contains sulfur and is often the starting amino acid in protein synthesis. Important for protein folding and structure.'
+                    description: 'Methionine contains sulfur and is often the starting amino acid in protein synthesis, and it is important for protein folding and structure.'
                 },
                 'PHE': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-benzene)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Nonpolar, aromatic',
-                    description: 'Phenylalanine has a large aromatic benzene ring. Hydrophobic and often involved in protein-protein interactions through Ï€-Ï€ stacking.'
+                    description: 'Phenylalanine has a large aromatic benzene ring, so it is hydrophobic and often takes part in protein-protein interactions through π-π stacking.'
                 },
                 'PRO': {
                     structure: 'Hâ‚‚Nâº-cyclic-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Rigid, cyclic',
-                    description: 'Proline has a unique cyclic structure that restricts backbone flexibility. Often found in turns and can disrupt secondary structures.'
+                    description: 'Proline has a unique cyclic structure that restricts backbone flexibility, so it is often found in turns and can disrupt secondary structures.'
                 },
                 'SER': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-OH)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Polar, uncharged',
-                    description: 'Serine has a hydroxyl group that can form hydrogen bonds. Often phosphorylated for regulatory purposes and common in enzyme active sites.'
+                    description: 'Serine has a hydroxyl group that can form hydrogen bonds, and it is often phosphorylated for regulatory purposes and common in enzyme active sites.'
                 },
                 'THR': {
                     structure: 'Hâ‚ƒNâº-CH(CH(OH)CHâ‚ƒ)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Polar, uncharged',
-                    description: 'Threonine has a hydroxyl group like serine but with an additional methyl group. Can be phosphorylated and involved in protein regulation.'
+                    description: 'Threonine has a hydroxyl group like serine but with an additional methyl group, and it can be phosphorylated and take part in protein regulation.'
                 },
                 'TRP': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-indole)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Nonpolar, aromatic',
-                    description: 'Tryptophan has the largest side chain with an indole ring. Highly hydrophobic and often involved in protein-membrane interactions.'
+                    description: 'Tryptophan has the largest side chain, an indole ring, and it is highly hydrophobic and often involved in protein-membrane interactions.'
                 },
                 'TYR': {
                     structure: 'Hâ‚ƒNâº-CH(CHâ‚‚-phenol)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Polar, aromatic',
-                    description: 'Tyrosine has a phenol group that can form hydrogen bonds. Can be phosphorylated for signaling and involved in protein-protein interactions.'
+                    description: 'Tyrosine has a phenol group that can form hydrogen bonds, and it can be phosphorylated for signaling and take part in protein-protein interactions.'
                 },
                 'VAL': {
                     structure: 'Hâ‚ƒNâº-CH(CH(CHâ‚ƒ)â‚‚)-COOâ»',
                     type: 'Amino Acid',
                     properties: 'Nonpolar, hydrophobic',
-                    description: 'Valine is a branched, hydrophobic amino acid. Important for protein structure and commonly found in the hydrophobic core of proteins.'
+                    description: 'Valine is a branched, hydrophobic amino acid that is important for protein structure and commonly found in the hydrophobic core of proteins.'
                 },
                 'A': {
                     structure: 'Adenine-Ribose-POâ‚„',
                     type: 'RNA Nucleotide',
                     properties: 'Purine base',
-                    description: 'Adenine nucleotide in RNA. Forms two hydrogen bonds with uracil. Essential for genetic information storage and protein synthesis.'
+                    description: 'This is the adenine nucleotide in RNA, which forms two hydrogen bonds with uracil and is essential for genetic information storage and protein synthesis.'
                 },
                 'U': {
                     structure: 'Uracil-Ribose-POâ‚„',
                     type: 'RNA Nucleotide',
                     properties: 'Pyrimidine base',
-                    description: 'Uracil nucleotide in RNA. Forms two hydrogen bonds with adenine. Replaces thymine in RNA molecules.'
+                    description: 'This is the uracil nucleotide in RNA, which forms two hydrogen bonds with adenine and replaces thymine in RNA molecules.'
                 },
                 'G': {
                     structure: 'Guanine-Ribose-POâ‚„',
                     type: 'RNA Nucleotide',
                     properties: 'Purine base',
-                    description: 'Guanine nucleotide in RNA. Forms three hydrogen bonds with cytosine. Important for genetic stability and gene expression.'
+                    description: 'This is the guanine nucleotide in RNA, which forms three hydrogen bonds with cytosine and is important for genetic stability and gene expression.'
                 },
                 'C': {
                     structure: 'Cytosine-Ribose-POâ‚„',
                     type: 'RNA Nucleotide',
                     properties: 'Pyrimidine base',
-                    description: 'Cytosine nucleotide in RNA. Forms three hydrogen bonds with guanine. Essential for genetic information and protein synthesis.'
+                    description: 'This is the cytosine nucleotide in RNA, which forms three hydrogen bonds with guanine and is essential for genetic information and protein synthesis.'
                 },
                 'DA': {
                     structure: 'Adenine-Deoxyribose-POâ‚„',
                     type: 'DNA Nucleotide',
                     properties: 'Purine base',
-                    description: 'Deoxyadenosine in DNA. Forms two hydrogen bonds with thymine. Essential for genetic information storage.'
+                    description: 'This is deoxyadenosine in DNA, which forms two hydrogen bonds with thymine and is essential for genetic information storage.'
                 },
                 'DT': {
                     structure: 'Thymine-Deoxyribose-POâ‚„',
                     type: 'DNA Nucleotide',
                     properties: 'Pyrimidine base',
-                    description: 'Deoxythymidine in DNA. Forms two hydrogen bonds with adenine. Unique to DNA, replaced by uracil in RNA.'
+                    description: 'This is deoxythymidine in DNA, which forms two hydrogen bonds with adenine and is unique to DNA, since RNA uses uracil in its place.'
                 },
                 'DG': {
                     structure: 'Guanine-Deoxyribose-POâ‚„',
                     type: 'DNA Nucleotide',
                     properties: 'Purine base',
-                    description: 'Deoxyguanosine in DNA. Forms three hydrogen bonds with cytosine. Important for genetic stability.'
+                    description: 'This is deoxyguanosine in DNA, which forms three hydrogen bonds with cytosine and is important for genetic stability.'
                 },
                 'DC': {
                     structure: 'Cytosine-Deoxyribose-POâ‚„',
                     type: 'DNA Nucleotide',
                     properties: 'Pyrimidine base',
-                    description: 'Deoxycytidine in DNA. Forms three hydrogen bonds with guanine. Essential for genetic information storage.'
+                    description: 'This is deoxycytidine in DNA, which forms three hydrogen bonds with guanine and is essential for genetic information storage.'
                 }
             };
             
