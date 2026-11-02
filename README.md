@@ -1,42 +1,23 @@
 # pdbview
 
-I built a browser PDB viewer on [3Dmol.js](https://3dmol.org/) to inspect a structure without installing molecular visualization software.
+A PDB structure viewer for the browser, built on [3Dmol.js](https://3dmol.org/) with no build step. Give it an RCSB ID, such as [4HHB](https://mottopanikeiku.github.io/pdbview/?pdb=4HHB) for hemoglobin, or drop in a `.pdb` file, which stays on your machine. With no ID it opens crambin (1CRN).
 
-**[Open the viewer](https://mottopanikeiku.github.io/pdbview/)**. The bundled [crambin structure](data/1CRN.pdb) loads on arrival. I can fetch an RCSB PDB ID, upload or drop a local file, select an observed residue, measure the distance between atoms, and share the current view.
+![Hemoglobin (4HHB) colored by chain, His B:77 selected, 17.8 Å measured between two atoms](assets/pdbview.png)
 
-![Crambin with a selected residue and atom distance](docs/assets/pdbview-features.png)
+Clicking a residue in the sequence strip highlights it in 3D. Picking two atoms gives their distance in ångströms. The structure draws as ribbon, stick, sphere, line or cross, colored by chain, residue or element, and other panels show the atom records, the raw PDB text and the entry's citations. The Share view button writes a link with the structure ID, style, camera, selection and measurement, so whoever opens it sees exactly what you saw.
 
-## What I can inspect
+The 3D view shows the first model and the A alternate location. Arrow keys rotate, `+` and `-` zoom, `C` centers.
 
-- **Structure:** enter a PDB ID and press Enter. Downloads come directly from [RCSB](https://files.rcsb.org/); `?pdb=1BNA` opens that entry.
-- **Sequence:** click a residue in the strip to highlight it. Chain, residue number and insertion code identify the residue. The strip shows observed standard amino acids, not a full sequence reconstructed across missing coordinates.
-- **Distance:** turn on **Pick two atoms**, then click two atoms in the structure. For precise or keyboard-only selection, choose atoms in the two selectors and press **Measure selected atoms**. The line and label show the Euclidean coordinate distance in ångströms. A third pick starts a new measurement.
-- **Files:** drop one `.pdb` file anywhere on the page, or use the file chooser. Local coordinates stay in the browser; I do not upload them.
-- **Sharing:** **Share view** produces a selectable URL containing the RCSB ID or bundled example, representation, color, camera, selected residue and measurement. Local files cannot be shared this way.
-- **Data tabs:** for RCSB entries, Literature lists the entry's citations with DOI and PubMed links. Atoms lists ATOM/HETATM records with type, chain and element filters; Raw PDB shows every non-blank line with a record-type filter.
-- **Keyboard:** Tab reaches controls and residues; Enter/Space activates native buttons. With the structure focused, arrow keys rotate, `+`/`-` zoom and `C` centers. Escape closes details and clears the measurement without unloading the structure.
-
-[`script.js`](script.js) handles parsing, representations and data tabs. [`interactions.js`](interactions.js) connects the sequence, picking, distance and URL state. [`tests/features.spec.cjs`](tests/features.spec.cjs) checks those transitions in headless Chromium, including actual canvas picking, insertion codes, blank chains, dropped files, malformed input, markup characters in file and RCSB text, load ordering, URL restoration and axe accessibility scans on desktop, mobile and the data tabs. The [arrival smoke test](tests/smoke.spec.cjs) checks that the bundled PDB parses to 327 atoms and the canvas shows colored pixels, exercises controls and rejects console errors. These are functional checks, not speed measurements or scientific validation.
-
-## Run locally
-
-I use Node.js 22 and a WebGL browser. Chromium tests use software rendering; no GPU, API key, account or paid compute is needed. Packages and pinned CDN libraries need internet access.
+## Running it
 
 ```sh
-npm ci && npx playwright install --with-deps chromium
-npm test
 python3 -m http.server 8000
 ```
 
-Open `http://localhost:8000/`. Tests start their own server under `/pdbview/`; there is no build step. CI runs the same browser suite and attaches screenshots. [Pages deployment](.github/workflows/pages.yml) publishes only the public app and bundled PDB after tests pass on `main`.
+Then open `http://localhost:8000/`. The Playwright tests:
 
-## Limits and sources
+```sh
+npm ci && npx playwright install chromium && npm test
+```
 
-- PDB input only; local files are limited to 50 MB. Large structures and dense representations may be slow.
-- Share links depend on atom ordering in the fetched PDB. They do not embed coordinates or publication data.
-- The sequence excludes modified amino acids, nucleic acids and residues absent from the coordinates. Measurements use the parsed model, not symmetry mates or periodic boundaries.
-- The 3D view, structure stats, sequence and measurements use the first model and first alternate location that 3Dmol parses. The Atoms and Raw PDB tabs list every record, so their counts are larger for NMR ensembles and alternate conformations.
-- axe checks do not prove every accessibility need is met. I test Chromium, not every browser or assistive technology.
-- This is an inspection tool, not a simulation or structure-quality assessment.
-
-Rendering and parsing come from [3Dmol.js](https://github.com/3dmol/3Dmol.js); DOM helpers use [jQuery](https://jquery.com/). Structure data and optional publications come from [RCSB PDB](https://www.rcsb.org/). The raw-text virtual grid draws on [Gabriel Petersson's fast-grid](https://github.com/gabrielpetersson/fast-grid). My code is [MIT licensed](LICENSE); upstream libraries and PDB data retain their own terms.
+Structures and citations come from [RCSB PDB](https://www.rcsb.org/). The page also uses [jQuery](https://jquery.com/), and the raw-text grid is [fast-grid](https://github.com/gabrielpetersson/fast-grid) by Gabriel Petersson. Code is MIT; libraries and PDB data keep their own terms.
