@@ -1,4 +1,4 @@
-﻿        // Performance utilities
+﻿        // Utilities
         class PerformanceManager {
             static debounce(func, wait) {
                 let timeout;
@@ -13,7 +13,7 @@
             }
         }
         
-        // Enhanced cache manager with expiration
+        // Cache manager with expiration
         class CacheManager {
             constructor(maxAge = 300000) { // 5 minutes
                 this.cache = new Map();
@@ -65,7 +65,7 @@
         let proteinSequence = [];
         let selectedResidue = null;
         
-        // Enhanced cache instances
+        // Cache instances
         const literatureCache = new CacheManager(600000); // 10 minutes
         const pdbCache = new CacheManager(1800000); // 30 minutes
         
@@ -96,7 +96,7 @@
             isParsing: false  // Flag to prevent duplicate parsing
         };
         
-        // Progressive loading for better performance
+        // Progressive loading
         document.addEventListener('DOMContentLoaded', function() {
             // Core functionality first
             initializeViewer();
@@ -151,7 +151,7 @@
             });
         }
         
-        // Optimized rendering for performance
+        // Rendering
         let renderAnimationFrame;
         let isRenderScheduled = false;
         
@@ -185,7 +185,7 @@
             viewer = $3Dmol.createViewer($(element), {
                 defaultcolors: $3Dmol.elementColors.rasmol,
                 backgroundColor: 'black',
-                // Enhanced performance optimizations
+                // Rendering settings
                 antialias: false,
                 preserveDrawingBuffer: false,
                 powerPreference: "high-performance",
@@ -196,7 +196,7 @@
                 failIfMajorPerformanceCaveat: false
             });
             
-            // Set up optimized controls
+            // Set up controls
             viewer.setViewStyle({style: "outline", color: "black", width: 0.1});
             
             // Use single RAF call for initial setup
@@ -310,7 +310,7 @@
             }
         }
         
-        // Debounced loading function for performance
+        // Debounced loading function
         const debouncedLoadPDB = PerformanceManager.debounce(loadPDBFromId, 300);
         
         async function loadPDBFromId(restoreUrl = false) {
@@ -481,10 +481,10 @@
             const styleType = styleSelect.value;
             const colorScheme = colorSelect.value;
             
-            // Batch style updates for better performance
+            // Batch style updates
             cancelPendingRender(); // Cancel any pending renders
             
-            // Clear existing styles efficiently
+            // Clear existing styles
             // Measurements own their shapes; style changes must not erase them.
             viewer.setStyle({}, {});
             
@@ -907,7 +907,7 @@
         }
         
         
-        // File input handling (optimized)
+        // File input handling
         function setupFileInputHandler() {
             const fileInput = document.getElementById('pdb-file');
             const fileLabel = document.querySelector('.file-label');
@@ -961,15 +961,15 @@
         
         // tab switching functions
         function switchTab(tabName) {
-            // update tab buttons efficiently
+            // update tab buttons
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelector(`button[onclick="switchTab('${tabName}')"]`)?.classList.add('active');
             
-            // update tab panels efficiently
+            // update tab panels
             document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
             document.getElementById(`${tabName}-panel`)?.classList.add('active');
             
-            // if switching to 3d view, resize viewer efficiently
+            // if switching to 3d view, resize viewer
             if (tabName === '3d-view' && viewer) {
                 requestAnimationFrame(() => {
                     viewer.resize();
@@ -1227,7 +1227,7 @@
             const lines = pdbData.split('\n').filter(line => line.trim());
             $('#rawpdb-info').text(`${lines.length} lines of PDB data`);
             
-            // initialize fast grid for performance
+            // initialize fast grid
             initializeFastPdbGrid(lines);
         }
 
@@ -1304,7 +1304,7 @@
             fastGrid.container = document.getElementById('fast-grid-content');
             fastGrid.viewport = document.getElementById('fast-grid-viewport');
             
-            // setup scroll listener with throttling for performance
+            // setup scroll listener with throttling
             let scrollTimeout;
             fastGrid.viewport.addEventListener('scroll', () => {
                 if (scrollTimeout) clearTimeout(scrollTimeout);
@@ -1499,7 +1499,7 @@
             // Clear any existing scroll listeners
             if (atomTable.scrollHandler) viewport.removeEventListener('scroll', atomTable.scrollHandler);
             
-            // Ensure viewport has proper styling for scrolling
+            // Make the viewport scrollable
             viewport.style.overflow = 'auto';
             viewport.style.height = '100%';
             viewport.style.minHeight = '300px';
@@ -1605,7 +1605,7 @@
             // Clear existing rows
             atomTable.container.innerHTML = '';
             
-            // Create a document fragment for better performance
+            // Build rows in a document fragment
             const fragment = document.createDocumentFragment();
             
             // Render visible rows
